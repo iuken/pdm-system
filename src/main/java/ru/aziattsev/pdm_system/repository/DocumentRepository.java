@@ -1,0 +1,31 @@
+package ru.aziattsev.pdm_system.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+import ru.aziattsev.pdm_system.entity.Document;
+
+import java.util.Date;
+import java.util.Optional;
+
+public interface DocumentRepository extends JpaRepository<Document, Long> {
+    Optional<Document> findFirstByFilePath(String filePath);
+
+    @Modifying
+    @Query("update Document set lastModifiedTime = :lastModifiedTime, creationTime = :creationTime where Id = :documentId")
+    void setDocumentInfoById(Date lastModifiedTime, Date creationTime, Long documentId);
+
+//    void
+//
+//    @Transactional
+//    default Document saveOrUpdateIfExist(Document entity) {
+//        Optional<Long> docId = getIdByFilePath(entity.getFilePath());
+//        docId.ifPresent();
+//        return save(entity);
+//    }
+
+
+
+}
