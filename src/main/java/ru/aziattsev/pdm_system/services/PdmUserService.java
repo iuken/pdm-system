@@ -1,14 +1,13 @@
 package ru.aziattsev.pdm_system.services;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
-import ru.aziattsev.pdm_system.entity.UserRole;
-import ru.aziattsev.pdm_system.repository.PdmUserRepository;
-
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import ru.aziattsev.pdm_system.entity.UserRole;
+import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 
 @Service
 public class PdmUserService implements UserDetailsService {

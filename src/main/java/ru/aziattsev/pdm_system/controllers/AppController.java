@@ -29,24 +29,24 @@ public class AppController {
     }
 
 
-    @PostMapping("/update")
-    public void updateDocumentInfo2(@Valid @RequestBody DocumentRequest request){
+    @PostMapping("/api/update")
+    public void updateDocumentInfo2(@Valid @RequestBody DocumentRequest request) {
         documentService.updateFromCad(request);
 
     }
-//    @PostMapping("/")
-//    public void updateDocumentInfo(@Valid @RequestBody DocumentRequest request){
-//        documentService.updateFromCad(request);
-//
-//    }
 
-    @GetMapping("/home")
+    @GetMapping("/upload")
+    public void updateDocumentInfo() {
+        documentService.init();
+
+    }
+
+    @GetMapping("/home2")
     public String home(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         if (userDetails != null) {
-            PdmUser user = pdmUserRepository.findByUsername(userDetails.getUsername())
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            PdmUser user = pdmUserRepository.findByUsername(userDetails.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
             model.addAttribute("user", user);
         }
-        return "home";
+        return "home2";
     }
 }

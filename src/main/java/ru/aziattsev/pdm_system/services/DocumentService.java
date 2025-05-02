@@ -1,6 +1,6 @@
 package ru.aziattsev.pdm_system.services;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,6 +8,7 @@ import ru.aziattsev.pdm_system.entity.Document;
 import ru.aziattsev.pdm_system.entity.DocumentRequest;
 import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.repository.DocumentRepository;
+import ru.aziattsev.pdm_system.repository.ItemRepository;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,9 +18,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import org.apache.commons.io.FilenameUtils;
-import ru.aziattsev.pdm_system.repository.ItemRepository;
 
 @Service
 public class DocumentService {
@@ -32,21 +30,14 @@ public class DocumentService {
     void UploadFromPath(String projectPath, String headAssemblyPath) {
         File dir = new File(projectPath);
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
-            stream
-                    .filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb"))
-                    .map(file -> {
-                        try {
-                            return new Document(
-                                    file.toString(),
-                                    new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis()),
-                                    new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis()));
-                        } catch (IOException e) {
-                            return new Document(file.toString());
-                        }
-                    })
-                    .forEach(this::update);
-        } catch (
-                IOException e) {
+            stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb")).map(file -> {
+                try {
+                    return new Document(file.toString(), new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis()), new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis()));
+                } catch (IOException e) {
+                    return new Document(file.toString());
+                }
+            }).forEach(this::update);
+        } catch (IOException e) {
         }
     }
 

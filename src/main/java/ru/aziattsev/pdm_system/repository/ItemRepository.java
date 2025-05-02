@@ -6,6 +6,6 @@ import ru.aziattsev.pdm_system.entity.Item;
 
 import java.util.Optional;
 
-public interface  ItemRepository extends JpaRepository<Item, Long> {
+public interface ItemRepository extends JpaRepository<Item, Long> {
     Optional<Item> findFirstByDocument(Document document);
 }
