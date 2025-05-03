@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Editable Items Table</title>
+    <style>
+        .table-container {
+            width: 800px;
+            height: 800px;
+            overflow: auto;
+            resize: both;
+            border: 1px solid #ccc;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        #items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #items-table th, #items-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            min-width: 100px;
+        }
+
+        #items-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+
+        .editable {
+            cursor: text;
+        }
+
+        .modified {
+            background-color: #fffacd;
+            font-weight: bold;
+        }
+
+        /* Стили для изменения ширины колонок */
+        .resizable-th {
+            position: relative;
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            background: #ddd;
+            cursor: col-resize;
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body>
+<a th:href="@{/upload}" role="button">Нажми меня (ссылка)</a>
+<button id="save-btn">Сохранить изменения</button>
+
+<div class="table-container">
+    <table id="items-table">
+        <thead>
+        <tr>
+            <th class="resizable-th">ID
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Производитель
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Количество
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Цена
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Статус
+                <div class="resize-handle"></div>
+            </th>
+            <!-- Колонки для документа -->
+            <th class="resizable-th">Файл
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Название
+                <div class="resize-handle"></div>
+            </th>
+            <th class="resizable-th">Материал
+                <div class="resize-handle"></div>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td th:text="${item.id}"></td>
+            <td class="editable" contenteditable="true"
+                data-field="manufacturer"
+                th:data-id="${item.id}"
+                th:text="${item.manufacturer}"></td>
+            <td class="editable" contenteditable="true"
+                data-field="quantity"
+                th:data-id="${item.id}"
+                th:text="${item.quantity}"></td>
+            <td class="editable" contenteditable="true"
+                data-field="price"
+                th:data-id="${item.id}"
+                th:text="${#numbers.formatDecimal(item.price, 1, 2)}"></td>
+            <td class="editable" contenteditable="true"
+                data-field="status"
+                th:data-id="${item.id}"
+                th:text="${item.status}"></td>
+            <!-- Поля документа (не редактируемые) -->
+            <td th:text="${item.document?.filePath}"></td>
+            <td th:text="${item.document?.name}"></td>
+            <td th:text="${item.document?.material2}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = document.getElementById('items-table');
+        const saveBtn = document.getElementById('save-btn');
+        const modifiedCells = new Set();
+
+        // Инициализация: сохраняем оригинальные значения всех редактируемых ячеек
+        table.querySelectorAll('.editable').forEach(cell => {
+            cell.setAttribute('data-original', cell.textContent.trim());
+        });
+
+        // Обработка редактирования ячеек
+        table.querySelectorAll('.editable').forEach(cell => {
+            cell.addEventListener('focus', function() {
+                this.classList.add('editing');
+            });
+
+            cell.addEventListener('blur', function() {
+                this.classList.remove('editing');
+                const originalValue = this.getAttribute('data-original');
+                const currentValue = this.textContent.trim();
+
+                if (currentValue !== originalValue) {
+                    this.classList.add('modified');
+                    modifiedCells.add(this);
+                } else {
+                    this.classList.remove('modified');
+                    modifiedCells.delete(this);
+                }
+            });
+        });
+        // Обработка кнопки сохранения
+        saveBtn.addEventListener('click', function() {
+            if (modifiedCells.size === 0) {
+                alert('Нет изменений для сохранения');
+                return;
+            }
+
+            const itemsMap = new Map();
+
+            modifiedCells.forEach(cell => {
+                const itemId = cell.getAttribute('data-id');
+                const field = cell.getAttribute('data-field');
+                let value;
+
+                try {
+                    value = field === 'price' ? parseFloat(cell.textContent) :
+                        field === 'quantity' ? parseInt(cell.textContent) :
+                            cell.textContent.trim();
+                } catch (e) {
+                    console.error('Error parsing value:', e);
+                    value = cell.textContent.trim();
+                }
+
+                if (!itemsMap.has(itemId)) {
+                    itemsMap.set(itemId, { id: itemId });
+                }
+                itemsMap.get(itemId)[field] = value;
+
+                // Обновляем оригинальное значение после сохранения
+                cell.setAttribute('data-original', cell.textContent.trim());
+                cell.classList.remove('modified');
+            });
+
+            const itemsToUpdate = Array.from(itemsMap.values());
+
+            fetch('/home/save-items', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': /*[[${_csrf.token}]]*/ 'token'
+                },
+                body: JSON.stringify(itemsToUpdate)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error('Ошибка сохранения');
+                })
+                .then(message => {
+                    alert(message);
+                    modifiedCells.clear();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при сохранении изменений: ' + error.message);
+                });
+        });
+
+    // Реализация изменения ширины колонок
+    document.querySelectorAll('.resizable-th').forEach(th => {
+        const handle = th.querySelector('.resize-handle');
+        handle.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = th.offsetWidth;
+
+            function doDrag(e) {
+                const newWidth = startWidth + e.clientX - startX;
+                th.style.width = newWidth + 'px';
+                // Обновляем ширину всех ячеек в колонке
+                const colIndex = Array.from(th.parentNode.children).indexOf(th);
+                const rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const cell = row.children[colIndex];
+                    if (cell) cell.style.width = newWidth + 'px';
+                });
+            }
+
+            function stopDrag() {
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+            }
+
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+        });
+    });
+    })
+    ;
+</script>
+</body>
+</html>
