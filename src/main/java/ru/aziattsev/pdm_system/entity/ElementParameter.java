@@ -10,7 +10,7 @@ public class ElementParameter {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "element_id")
+    @JoinColumn
     private EngineeringElement element;
 
     private String name;

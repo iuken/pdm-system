@@ -16,13 +16,13 @@ public class EngineeringElement {
     private String objectId;
 
     @ManyToOne
-    @JoinColumn(name = "parent_id")
+    @JoinColumn
     private EngineeringElement parent;
 
     private Integer position;
     private Integer childrenCount;
 
-    // Основные параметры как поля класса
+//    // Основные параметры как поля класса
     private String designation;     // Обозначение
     private String name;           // Наименование
     private String fullDesignation; // Обозначение полное

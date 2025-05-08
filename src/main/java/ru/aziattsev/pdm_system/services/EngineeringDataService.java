@@ -16,8 +16,9 @@ import ru.aziattsev.pdm_system.repository.XmlTreeRepository;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
-import java.util.*;
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,25 +71,28 @@ public class EngineeringDataService {
     private void parseElement(Element xmlElement, EngineeringElement parent, XmlTree tree) {
         String objectId = xmlElement.getAttribute("ObjectId");
 
-        // Создаем или получаем элемент
-        EngineeringElement element = elementRepository.findByTreeAndObjectId(tree, objectId)
-                .orElseGet(() -> {
-                    EngineeringElement newElement = new EngineeringElement();
-                    newElement.setTree(tree);
-                    newElement.setObjectId(objectId);
-                    newElement.setParent(parent);
-                    return newElement;
-                });
-
+        EngineeringElement engineeringElement = new EngineeringElement();
+        engineeringElement.setTree(tree);
+        engineeringElement.setObjectId(objectId);
+        engineeringElement.setParent(parent);
         // Парсим параметры из XML
         List<ElementParameter> parameters = new ArrayList<>();
-        NodeList params = xmlElement.getElementsByTagName("Parameter");
+        NodeList params = xmlElement.getChildNodes();
+        Node parametersNode = null;
         for (int i = 0; i < params.getLength(); i++) {
             Node paramNode = params.item(i);
+            if (paramNode.getNodeType() == Node.ELEMENT_NODE
+                    && paramNode.getNodeName().equals("Parameters")) {
+                parametersNode = params.item(i);
+            }
+        }
+        NodeList parametersList = parametersNode.getChildNodes();
+        for (int i = 0; i < parametersList.getLength(); i++) {
+            Node paramNode = parametersList.item(i);
             if (paramNode.getNodeType() == Node.ELEMENT_NODE) {
                 Element paramElement = (Element) paramNode;
                 ElementParameter param = new ElementParameter();
-                param.setElement(element);
+                param.setElement(engineeringElement);
                 param.setName(paramElement.getAttribute("Name"));
                 param.setValue(paramElement.getAttribute("Value"));
                 param.setIsAuxiliary(paramElement.getAttribute("IsAuxiliary"));
@@ -102,66 +106,24 @@ public class EngineeringDataService {
         }
 
         // Применяем параметры к полям элемента
-        applyParametersToElement(element, parameters);
+        applyParametersToElement(engineeringElement, parameters);
 
         // Сохраняем элемент с параметрами
-        element = elementRepository.save(element);
+        elementRepository.save(engineeringElement);
         parameterRepository.saveAll(parameters);
 
         // Обрабатываем дочерние элементы
         NodeList children = xmlElement.getElementsByTagName("Children");
         if (children.getLength() > 0) {
             NodeList childElements = ((Element) children.item(0)).getElementsByTagName("Element");
-            element.setChildrenCount(childElements.getLength());
-            elementRepository.save(element);
+            engineeringElement.setChildrenCount(childElements.getLength());
+            elementRepository.save(engineeringElement);
 
             for (int i = 0; i < childElements.getLength(); i++) {
                 Node childNode = childElements.item(i);
                 if (childNode.getNodeType() == Node.ELEMENT_NODE) {
-                    parseElement((Element) childNode, element, tree);
+                    parseElement((Element) childNode, engineeringElement, tree);
                 }
-            }
-        }
-    }
-
-    private int getPositionFromXml(Element xmlElement) {
-        NodeList params = xmlElement.getElementsByTagName("Parameter");
-        for (int i = 0; i < params.getLength(); i++) {
-            Node paramNode = params.item(i);
-            if (paramNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element paramElement = (Element) paramNode;
-                if (paramElement.getAttribute("Name").equals("Position")) {
-                    return Integer.parseInt(paramElement.getAttribute("Value"));
-                }
-            }
-        }
-        return 0;
-    }
-
-    private void processParameters(Element xmlElement, EngineeringElement element) {
-        // Удаляем старые параметры
-        parameterRepository.deleteByElement(element);
-
-        // Добавляем новые параметры
-        NodeList params = xmlElement.getElementsByTagName("Parameter");
-        for (int i = 0; i < params.getLength(); i++) {
-            Node paramNode = params.item(i);
-            if (paramNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element paramElement = (Element) paramNode;
-
-                ElementParameter param = new ElementParameter();
-                param.setElement(element);
-                param.setName(paramElement.getAttribute("Name"));
-                param.setSynonymName(paramElement.getAttribute("SynonymName"));
-                param.setValue(paramElement.getAttribute("Value"));
-                param.setIsAuxiliary(paramElement.getAttribute("IsAuxiliary"));
-                param.setIsGenerated(paramElement.getAttribute("IsGenerated"));
-                param.setIsUserDefined(paramElement.getAttribute("IsUserDefined"));
-                param.setText(paramElement.getAttribute("Text"));
-                param.setVariableName(paramElement.getAttribute("VariableName"));
-                param.setUnits(paramElement.getAttribute("Units"));
-
-                parameterRepository.save(param);
             }
         }
     }
@@ -210,62 +172,5 @@ public class EngineeringDataService {
         }
 
         element.setFormat(paramMap.getOrDefault("Формат", null));
-    }
-    private Integer parseIntSafe(String value) {
-        try {
-            return value != null ? Integer.parseInt(value) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private Double parseDoubleSafe(String value) {
-        try {
-            return value != null ? Double.parseDouble(value) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private List<ElementParameter> processXmlParameters(Element xmlElement, EngineeringElement element) {
-        // Удаляем старые параметры
-        parameterRepository.deleteByElement(element);
-
-        // Обрабатываем параметры из XML
-        List<ElementParameter> parameters = new ArrayList<>();
-        NodeList params = xmlElement.getElementsByTagName("Parameter");
-
-        for (int i = 0; i < params.getLength(); i++) {
-            Node paramNode = params.item(i);
-            if (paramNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element paramElement = (Element) paramNode;
-
-                ElementParameter param = new ElementParameter();
-                param.setElement(element);
-                param.setName(paramElement.getAttribute("Name"));
-                param.setValue(paramElement.getAttribute("Value"));
-                // ... другие поля параметра
-
-                parameters.add(parameterRepository.save(param));
-            }
-        }
-
-        return parameters;
-    }
-
-    private void processChildElements(Element xmlElement, EngineeringElement parent, XmlTree tree) {
-        NodeList children = xmlElement.getElementsByTagName("Children");
-        if (children.getLength() > 0) {
-            NodeList childElements = ((Element) children.item(0)).getElementsByTagName("Element");
-            parent.setChildrenCount(childElements.getLength());
-            parent = elementRepository.save(parent);
-
-            for (int i = 0; i < childElements.getLength(); i++) {
-                Node childNode = childElements.item(i);
-                if (childNode.getNodeType() == Node.ELEMENT_NODE) {
-                    parseElement((Element) childNode, parent, tree);
-                }
-            }
-        }
     }
 }

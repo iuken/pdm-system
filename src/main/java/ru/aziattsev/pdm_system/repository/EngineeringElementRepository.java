@@ -13,4 +13,5 @@ public interface EngineeringElementRepository extends JpaRepository<EngineeringE
     List<EngineeringElement> findByParentId(Long parentId);
 
     Optional<EngineeringElement> findByTreeAndObjectId(XmlTree tree, String objectId);
+    void deleteByTree(XmlTree tree);
 }
