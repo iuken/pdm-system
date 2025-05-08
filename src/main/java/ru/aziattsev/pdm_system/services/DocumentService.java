@@ -27,7 +27,7 @@ public class DocumentService {
     @Autowired
     ItemRepository itemRepository;
 
-    void UploadFromPath(String projectPath, String headAssemblyPath) {
+    public void UploadFromPath(String projectPath) {
         File dir = new File(projectPath);
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
             stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb")).map(file -> {
@@ -55,10 +55,6 @@ public class DocumentService {
             itemRepository.save(new Item(document));
         }
 
-    }
-
-    public void init() {
-        UploadFromPath("C:\\Users\\Александр Азиатцев\\Desktop\\НТКМ", "");
     }
 
     @Transactional

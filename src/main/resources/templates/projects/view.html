@@ -25,6 +25,11 @@
                 Import Structure XML
             </button>
 
+            <!-- Новая кнопка для обновления информации о документах -->
+            <button type="button" class="btn btn-info ms-2" id="updateDocsBtn">
+                Update Documents Info
+            </button>
+
             <!-- Блок для отображения результата -->
             <div id="importResult" class="alert mt-3 d-none"></div>
         </div>
@@ -54,6 +59,30 @@
                 },
                 error: function(xhr) {
                     const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Error during import';
+                    showResult(errorMsg, 'danger');
+                }
+            });
+        });
+
+        $('#updateDocsBtn').click(function() {
+            const directoryPath = '[[${project.directory?.replace("\", "\\")}]]';
+
+            if (!directoryPath) {
+                showResult('Project directory is not defined', 'danger');
+                return;
+            }
+
+            showResult('Updating documents info...', 'info');
+
+            $.ajax({
+                url: '/api/engineering-data/upload',
+                type: 'POST',
+                data: { directoryPath: directoryPath },
+                success: function() {
+                    showResult('Documents info updated successfully', 'success');
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Error during documents update';
                     showResult(errorMsg, 'danger');
                 }
             });

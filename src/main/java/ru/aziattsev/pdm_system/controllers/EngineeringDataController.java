@@ -1,12 +1,12 @@
 package ru.aziattsev.pdm_system.controllers;
 
-import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.aziattsev.pdm_system.entity.ElementParameter;
 import ru.aziattsev.pdm_system.entity.EngineeringElement;
 import ru.aziattsev.pdm_system.entity.XmlTree;
+import ru.aziattsev.pdm_system.services.DocumentService;
 import ru.aziattsev.pdm_system.services.EngineeringDataService;
 
 import java.nio.file.Files;
@@ -18,9 +18,11 @@ import java.util.List;
 public class EngineeringDataController {
 
     private final EngineeringDataService dataService;
+    private final DocumentService documentService;
 
-    public EngineeringDataController(EngineeringDataService dataService) {
+    public EngineeringDataController(EngineeringDataService dataService, DocumentService documentService) {
         this.dataService = dataService;
+        this.documentService = documentService;
     }
 
     @PostMapping("/import")
@@ -44,6 +46,11 @@ public class EngineeringDataController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse(false, "Ошибка при импорте файла: " + e.getMessage()));
         }
+    }
+
+    @PostMapping("/upload")
+    public void updateDocumentInfo(@RequestParam String directoryPath) {
+        documentService.UploadFromPath(directoryPath);
     }
 
     @GetMapping("/trees")
