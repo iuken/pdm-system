@@ -1,24 +1,25 @@
 package ru.aziattsev.pdm_system.services;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
+import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import ru.aziattsev.pdm_system.entity.ElementParameter;
 import ru.aziattsev.pdm_system.entity.EngineeringElement;
+import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.entity.XmlTree;
-import ru.aziattsev.pdm_system.repository.ElementParameterRepository;
-import ru.aziattsev.pdm_system.repository.EngineeringElementRepository;
-import ru.aziattsev.pdm_system.repository.XmlTreeRepository;
+import ru.aziattsev.pdm_system.repository.*;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,104 +29,108 @@ public class EngineeringDataService {
     private final XmlTreeRepository xmlTreeRepository;
     private final EngineeringElementRepository elementRepository;
     private final ElementParameterRepository parameterRepository;
+    private final ItemRepository itemRepository;
+
+    private final DocumentRepository documentRepository;
 
     public EngineeringDataService(XmlTreeRepository xmlTreeRepository,
                                   EngineeringElementRepository elementRepository,
-                                  ElementParameterRepository parameterRepository) {
+                                  ElementParameterRepository parameterRepository,
+                                  ItemRepository itemRepository,
+                                  DocumentRepository documentRepository) {
         this.xmlTreeRepository = xmlTreeRepository;
         this.elementRepository = elementRepository;
         this.parameterRepository = parameterRepository;
+        this.itemRepository = itemRepository;
+        this.documentRepository = documentRepository;
     }
 
     public void importXmlFile(String filePath) throws Exception {
+        XmlTree newTree = new XmlTree();
+        xmlTreeRepository.save(newTree);
+
         File xmlFile = new File(filePath);
-        String sourceName = xmlFile.getName();
 
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(xmlFile);
+        try {
+            Document doc = Jsoup.parse(xmlFile, null, "", Parser.xmlParser());
+            org.jsoup.nodes.Element rootElement = doc.selectFirst("Element");
+            parseElement(rootElement, null, newTree);
+        } catch (IOException e) {
 
-        NodeList rootElements = doc.getElementsByTagName("Elements").item(0).getChildNodes();
-
-        for (int i = 0; i < rootElements.getLength(); i++) {
-            Node node = rootElements.item(i);
-            if (node.getNodeType() == Node.ELEMENT_NODE && node.getNodeName().equals("Element")) {
-                Element element = (Element) node;
-                String rootObjectId = element.getAttribute("ObjectId");
-
-                // Создаем или получаем существующее дерево
-                XmlTree tree = xmlTreeRepository.findBySourceNameAndRootObjectId(sourceName, rootObjectId)
-                        .orElseGet(() -> {
-                            XmlTree newTree = new XmlTree();
-                            newTree.setSourceName(sourceName);
-                            newTree.setRootObjectId(rootObjectId);
-                            return xmlTreeRepository.save(newTree);
-                        });
-
-                // Парсим дерево элементов
-                parseElement(element, null, tree);
-            }
         }
     }
 
     private void parseElement(Element xmlElement, EngineeringElement parent, XmlTree tree) {
-        String objectId = xmlElement.getAttribute("ObjectId");
+        String objectId = xmlElement.attributes().get("ObjectId");
 
         EngineeringElement engineeringElement = new EngineeringElement();
         engineeringElement.setTree(tree);
         engineeringElement.setObjectId(objectId);
         engineeringElement.setParent(parent);
         // Парсим параметры из XML
-        List<ElementParameter> parameters = new ArrayList<>();
-        NodeList params = xmlElement.getChildNodes();
-        Node parametersNode = null;
-        for (int i = 0; i < params.getLength(); i++) {
-            Node paramNode = params.item(i);
-            if (paramNode.getNodeType() == Node.ELEMENT_NODE
-                    && paramNode.getNodeName().equals("Parameters")) {
-                parametersNode = params.item(i);
-            }
-        }
-        NodeList parametersList = parametersNode.getChildNodes();
-        for (int i = 0; i < parametersList.getLength(); i++) {
-            Node paramNode = parametersList.item(i);
-            if (paramNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element paramElement = (Element) paramNode;
-                ElementParameter param = new ElementParameter();
-                param.setElement(engineeringElement);
-                param.setName(paramElement.getAttribute("Name"));
-                param.setValue(paramElement.getAttribute("Value"));
-                param.setIsAuxiliary(paramElement.getAttribute("IsAuxiliary"));
-                param.setIsGenerated(paramElement.getAttribute("IsGenerated"));
-                param.setIsUserDefined(paramElement.getAttribute("IsUserDefined"));
-                param.setText(paramElement.getAttribute("Text"));
-                param.setVariableName(paramElement.getAttribute("VariableName"));
-                param.setUnits(paramElement.getAttribute("Units"));
-                parameters.add(param);
-            }
-        }
+        List<ElementParameter> parameters;
 
-        // Применяем параметры к полям элемента
+        Elements xmlParameters = xmlElement.selectFirst("Parameters").select("Parameter");
+        Element xmlChildren = xmlElement.selectFirst("Children");
+
+        parameters = parseParameter(xmlParameters);
         applyParametersToElement(engineeringElement, parameters);
-
-        // Сохраняем элемент с параметрами
         elementRepository.save(engineeringElement);
-        parameterRepository.saveAll(parameters);
 
-        // Обрабатываем дочерние элементы
-        NodeList children = xmlElement.getElementsByTagName("Children");
-        if (children.getLength() > 0) {
-            NodeList childElements = ((Element) children.item(0)).getElementsByTagName("Element");
-            engineeringElement.setChildrenCount(childElements.getLength());
-            elementRepository.save(engineeringElement);
+        if (xmlChildren != null) {
 
-            for (int i = 0; i < childElements.getLength(); i++) {
-                Node childNode = childElements.item(i);
-                if (childNode.getNodeType() == Node.ELEMENT_NODE) {
-                    parseElement((Element) childNode, engineeringElement, tree);
+            Element firstChild = xmlChildren.selectFirst("Element");
+            parseElement(firstChild, engineeringElement, tree);
+            for (Element child : xmlChildren.selectFirst("Element").siblingElements())
+                parseElement(child, engineeringElement, tree);
+        }
+
+    }
+
+    List<ElementParameter> parseParameter(Elements xmlParameters) {
+        List<ElementParameter> params = new ArrayList<>();
+
+        int i = 0;
+        for (Element parameter : xmlParameters) {
+            ElementParameter param = new ElementParameter();
+            for (Attribute attribute : parameter.attributes()) {
+                switch (attribute.getKey()) {
+                    case "Name":
+                        param.setName(attribute.getValue());
+                        break;
+                    case "IsAuxiliary":
+                        param.setIsAuxiliary(attribute.getValue());
+                        break;
+                    case "SynonymName":
+                        param.setSynonymName(attribute.getValue());
+                        break;
+                    case "Value":
+                        param.setValue(attribute.getValue());
+                        break;
+                    case "Units":
+                        param.setUnits(attribute.getValue());
+                        break;
+                    case "IsGenerated":
+                        param.setIsGenerated(attribute.getValue());
+                        break;
+                    case "IsUserDefined":
+                        param.setIsUserDefined(attribute.getValue());
+                        break;
+                    case "Text":
+                        param.setText(attribute.getValue());
+                        break;
+                    case "VariableName":
+                        param.setVariableName(attribute.getValue());
+                        break;
+                    default:
+                        break;
                 }
             }
+            params.add(param);
+            i++;
         }
+
+        return params;
     }
 
     public List<XmlTree> getAllTrees() {
@@ -139,6 +144,7 @@ public class EngineeringDataService {
     public List<ElementParameter> getElementParameters(String objectId) {
         return parameterRepository.findByElementObjectId(objectId);
     }
+
     private void applyParametersToElement(EngineeringElement element, List<ElementParameter> parameters) {
         Map<String, String> paramMap = parameters.stream()
                 .collect(Collectors.toMap(
@@ -172,5 +178,30 @@ public class EngineeringDataService {
         }
 
         element.setFormat(paramMap.getOrDefault("Формат", null));
+    }
+
+    public void linkElementsToItems() {
+        List<EngineeringElement> elements = elementRepository.findAll();
+        for (EngineeringElement element : elements) {
+            // Ищем подходящий Document
+            Optional<ru.aziattsev.pdm_system.entity.Document> matchingDocument = documentRepository
+                    .findByDesignationAndName(element.getDesignation(), element.getName());
+
+            if (matchingDocument.isPresent()) {
+                // Ищем или создаем Item для этого Document
+                Item item = itemRepository.findByDocument(matchingDocument.get())
+                        .orElseGet(() -> {
+                            Item newItem = new Item();
+                            newItem.setDocument(matchingDocument.get());
+                            newItem.setQuantity(element.getQuantity() != null ?
+                                    element.getQuantity().toString() : "0");
+                            return itemRepository.save(newItem);
+                        });
+
+                // Привязываем Item к элементу
+                element.setItem(item);
+                elementRepository.save(element);
+            }
+        }
     }
 }

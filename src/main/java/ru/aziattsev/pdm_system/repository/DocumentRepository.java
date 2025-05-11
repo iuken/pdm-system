@@ -14,7 +14,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     @Modifying
     @Query("update Document set lastModifiedTime = :lastModifiedTime, creationTime = :creationTime where Id = :documentId")
     void setDocumentInfoById(Date lastModifiedTime, Date creationTime, Long documentId);
-
+    Optional<Document> findByDesignationAndName(String designation, String name);
 //    void
 //
 //    @Transactional

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.aziattsev.pdm_system.entity.CadProject;
 import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.repository.CadProjectRepository;
+import ru.aziattsev.pdm_system.repository.EngineeringElementRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
 
 import java.util.List;
@@ -17,9 +18,14 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private final CadProjectRepository cadProjectRepository;
 
-    public ItemService(ItemRepository itemRepository, CadProjectRepository cadProjectRepository) {
+    private final EngineeringElementRepository elementRepository;
+
+    public ItemService(ItemRepository itemRepository,
+                       CadProjectRepository cadProjectRepository,
+                       EngineeringElementRepository elementRepository) {
         this.itemRepository = itemRepository;
         this.cadProjectRepository = cadProjectRepository;
+        this.elementRepository = elementRepository;
     }
 
     public List<Item> findAll() {
@@ -42,5 +48,24 @@ public class ItemService {
     public List<Item> findAllByProjectId(Long id) {
         CadProject cadProject = cadProjectRepository.getReferenceById(id);
         return itemRepository.findAllByProject(cadProject);
+    }
+
+    public void updateFromProjectStructure(){
+        List<Item> items = itemRepository.findAll();
+
+        for (Item item : items) {
+            // Суммируем quantity всех связанных EngineeringElement
+            Integer totalQuantity = elementRepository.sumQuantityByItem(item);
+
+            // Обновляем quantity в Item
+            if (totalQuantity != null) {
+                item.setQuantity(String.valueOf(totalQuantity));
+            } else {
+                item.setQuantity("0"); // или другое значение по умолчанию
+            }
+        }
+
+        // Сохраняем все обновленные Items
+        itemRepository.saveAll(items);
     }
 }

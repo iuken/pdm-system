@@ -8,6 +8,7 @@ import ru.aziattsev.pdm_system.entity.EngineeringElement;
 import ru.aziattsev.pdm_system.entity.XmlTree;
 import ru.aziattsev.pdm_system.services.DocumentService;
 import ru.aziattsev.pdm_system.services.EngineeringDataService;
+import ru.aziattsev.pdm_system.services.ItemService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,10 +20,12 @@ public class EngineeringDataController {
 
     private final EngineeringDataService dataService;
     private final DocumentService documentService;
+    private final ItemService itemService;
 
-    public EngineeringDataController(EngineeringDataService dataService, DocumentService documentService) {
+    public EngineeringDataController(EngineeringDataService dataService, DocumentService documentService, ItemService itemService) {
         this.dataService = dataService;
         this.documentService = documentService;
+        this.itemService = itemService;
     }
 
     @PostMapping("/import")
@@ -39,6 +42,9 @@ public class EngineeringDataController {
             }
 
             dataService.importXmlFile(filePath);
+            dataService.linkElementsToItems();
+            itemService.updateFromProjectStructure();
+
             return ResponseEntity.ok()
                     .body(new ApiResponse(true, "Файл успешно импортирован: " + filePath));
 

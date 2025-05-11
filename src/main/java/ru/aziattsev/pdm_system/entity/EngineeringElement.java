@@ -33,6 +33,9 @@ public class EngineeringElement {
     private Double mass;           // Масса
     private String format;         // Формат
 
+    @ManyToOne
+    private Item item;
+
     public Long getId() {
         return id;
     }
@@ -151,6 +154,14 @@ public class EngineeringElement {
 
     public void setFormat(String format) {
         this.format = format;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
     }
 }
 

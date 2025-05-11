@@ -13,9 +13,8 @@ public class Item {
     private Long Id;
 
     @JoinColumn
-    @OneToOne
+    @ManyToOne
     private Document document;
-//    private String document;
 
     @JoinColumn
     @OneToOne
@@ -24,8 +23,8 @@ public class Item {
     @Column
     @OneToMany
     private List<PdmUser> participants;
-//    private String participants;
 
+//    private String participants;
     @Column
     private String quantity;
 
@@ -46,12 +45,12 @@ public class Item {
 
     @Column
     private Priority priority;
-//    private String priority;
 
+//    private String priority;
     @Column
     private DocumentStatus status;
-//    private String status;
 
+//    private String status;
     @JoinColumn
     @ManyToOne
     private CadProject project;
