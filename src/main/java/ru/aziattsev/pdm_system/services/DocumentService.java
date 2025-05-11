@@ -1,12 +1,10 @@
 package ru.aziattsev.pdm_system.services;
 
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.aziattsev.pdm_system.entity.Document;
-import ru.aziattsev.pdm_system.entity.DocumentRequest;
-import ru.aziattsev.pdm_system.entity.Item;
+import ru.aziattsev.pdm_system.entity.*;
+import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.DocumentRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
 
@@ -21,13 +19,21 @@ import java.util.stream.Stream;
 
 @Service
 public class DocumentService {
-    @Autowired
-    DocumentRepository documentRepository;
 
-    @Autowired
-    ItemRepository itemRepository;
+    private final DocumentRepository documentRepository;
 
-    public void UploadFromPath(String projectPath) {
+
+    private final ItemRepository itemRepository;
+    private final CadProjectRepository cadProjectRepository;
+
+    public DocumentService(DocumentRepository documentRepository, ItemRepository itemRepository, CadProjectRepository cadProjectRepository) {
+        this.documentRepository = documentRepository;
+        this.itemRepository = itemRepository;
+        this.cadProjectRepository = cadProjectRepository;
+    }
+
+    public void UploadFromPath(String projectPath, Long projectId) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
         File dir = new File(projectPath);
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
             stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb")).map(file -> {
@@ -36,7 +42,8 @@ public class DocumentService {
                 } catch (IOException e) {
                     return new Document(file.toString());
                 }
-            }).forEach(this::update);
+            }).peek(document -> document.setProject(cadProject))
+                    .forEach(this::update);
         } catch (IOException e) {
         }
     }
@@ -60,6 +67,7 @@ public class DocumentService {
     @Transactional
     public void updateFromCad(DocumentRequest documentRequest) {
         Optional<Document> document1 = documentRepository.findFirstByFilePath(documentRequest.filePath());
+        DocumentStatus documentStatus = DocumentStatus.UNDEFINED;
         Document document;
         if (document1.isPresent()) {
             document = document1.get();
@@ -84,15 +92,21 @@ public class DocumentService {
         document.setzSize(documentRequest.zSize());
         documentRepository.save(document);
 
+        documentStatus = documentRequest.documentStatus();
+        Item item;
         //поиск объекта связаного с этим документом
         Optional<Item> itemOptional = itemRepository.findFirstByDocument(document);
         //если такой обект существует ничего не делаем, ссылка обновится
         //если не существует
         if (itemOptional.isEmpty()) {
             //создаем объект
-            Item item = new Item(document);
+            item = new Item(document);
             //Сохраняем в бд
-            itemRepository.save(item);
         }
+        else {
+            item = itemOptional.get();
+        }
+        item.setStatus(documentStatus);
+        itemRepository.save(item);
     }
 }

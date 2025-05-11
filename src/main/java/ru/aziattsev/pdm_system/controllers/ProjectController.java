@@ -5,14 +5,17 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import ru.aziattsev.pdm_system.entity.CadProject;
 import ru.aziattsev.pdm_system.services.CadProjectService;
+import ru.aziattsev.pdm_system.services.ItemService;
 
 @Controller
 @RequestMapping("/projects")
 public class ProjectController {
     private final CadProjectService projectService;
+    private final ItemService itemService;
 
-    public ProjectController(CadProjectService projectService) {
+    public ProjectController(CadProjectService projectService, ItemService itemService) {
         this.projectService = projectService;
+        this.itemService = itemService;
     }
 
     @GetMapping
@@ -27,6 +30,11 @@ public class ProjectController {
         return "projects/view";
     }
 
+    @GetMapping("/{id}/items")
+    public String viewProjectItems(@PathVariable Long id, Model model) {
+        model.addAttribute("items", itemService.findAllByProjectId(id));
+        return "projects/project";
+    }
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("project", new CadProject());

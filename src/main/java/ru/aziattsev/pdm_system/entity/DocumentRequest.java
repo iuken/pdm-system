@@ -17,6 +17,7 @@ public record DocumentRequest(
         String mass,
         String xSize,
         String ySize,
-        String zSize
+        String zSize,
+        DocumentStatus documentStatus
 ) {
 }

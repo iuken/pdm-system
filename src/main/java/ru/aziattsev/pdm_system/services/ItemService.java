@@ -1,10 +1,11 @@
 package ru.aziattsev.pdm_system.services;
 
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.aziattsev.pdm_system.entity.CadProject;
 import ru.aziattsev.pdm_system.entity.Item;
+import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
 
 import java.util.List;
@@ -12,8 +13,14 @@ import java.util.List;
 @Service
 public class ItemService {
 
-    @Autowired
-    private ItemRepository itemRepository;
+
+    private final ItemRepository itemRepository;
+    private final CadProjectRepository cadProjectRepository;
+
+    public ItemService(ItemRepository itemRepository, CadProjectRepository cadProjectRepository) {
+        this.itemRepository = itemRepository;
+        this.cadProjectRepository = cadProjectRepository;
+    }
 
     public List<Item> findAll() {
         return itemRepository.findAll();
@@ -32,4 +39,8 @@ public class ItemService {
         });
     }
 
+    public List<Item> findAllByProjectId(Long id) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(id);
+        return itemRepository.findAllByProject(cadProject);
+    }
 }

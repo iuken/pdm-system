@@ -75,6 +75,10 @@ public class Document {
     @Column
     private String zSize;
 
+    @JoinColumn
+    @ManyToOne
+    private CadProject project;
+
     public Document(String filePath, Date creationTime, Date lastModifiedTime) {
         this.filePath = filePath;
         this.creationTime = creationTime;
@@ -239,5 +243,13 @@ public class Document {
 
     public void setzSize(String zSize) {
         this.zSize = zSize;
+    }
+
+    public CadProject getProject() {
+        return project;
+    }
+
+    public void setProject(CadProject project) {
+        this.project = project;
     }
 }

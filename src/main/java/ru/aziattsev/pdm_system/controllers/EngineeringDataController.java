@@ -49,8 +49,8 @@ public class EngineeringDataController {
     }
 
     @PostMapping("/upload")
-    public void updateDocumentInfo(@RequestParam String directoryPath) {
-        documentService.UploadFromPath(directoryPath);
+    public void updateDocumentInfo(@RequestParam String directoryPath, Long projectId) {
+        documentService.UploadFromPath(directoryPath, projectId);
     }
 
     @GetMapping("/trees")

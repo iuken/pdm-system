@@ -52,10 +52,15 @@ public class Item {
     private DocumentStatus status;
 //    private String status;
 
+    @JoinColumn
+    @ManyToOne
+    private CadProject project;
+
     public Item() {
     }
 
     public Item(Document document) {
+        this.project = document.getProject();
         this.document = document;
     }
 
@@ -153,5 +158,13 @@ public class Item {
 
     public void setStatus(DocumentStatus status) {
         this.status = status;
+    }
+
+    public CadProject getProject() {
+        return project;
+    }
+
+    public void setProject(CadProject project) {
+        this.project = project;
     }
 }
