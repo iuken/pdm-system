@@ -17,12 +17,6 @@ public class ItemController {
     @Autowired
     private ItemService itemService;
 
-    @GetMapping
-    public String showItems(Model model) {
-        model.addAttribute("items", itemService.findAll());
-        return "home";
-    }
-
     @PostMapping("/update2")
     @ResponseBody
     public ResponseEntity<String> updateItems(@RequestBody List<Item> updatedItems) {
@@ -40,4 +34,6 @@ public class ItemController {
         itemService.updateAll(items);
         return ResponseEntity.ok("Changes saved successfully");
     }
+
+
 }

@@ -2,7 +2,9 @@ package ru.aziattsev.pdm_system.controllers;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
@@ -15,6 +17,9 @@ import ru.aziattsev.pdm_system.entity.DocumentRequest;
 import ru.aziattsev.pdm_system.entity.PdmUser;
 import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.DocumentService;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Controller
 public class AppController {
@@ -36,12 +41,62 @@ public class AppController {
 
     }
 
-    @GetMapping("/home2")
-    public String home(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        @GetMapping("/home")
+        public String home(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+            if (userDetails != null) {
+                PdmUser user = pdmUserRepository.findByUsername(userDetails.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                model.addAttribute("pdmUser", user);
+            }
+            // Получаем аутентификационные данные текущего пользователя
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            // Добавляем имя пользователя в модель
+            String displayName = authentication.getName(); // или получить из вашего PdmUser
+
+            // Добавляем дату последнего входа (можно получать из БД)
+            model.addAttribute("lastLogin", LocalDateTime.now());
+
+            // Заглушки для демонстрации (в реальном приложении получать из сервисов)
+            model.addAttribute("projectsCount", 5);
+            model.addAttribute("tasksCount", 3);
+            model.addAttribute("unreadNotifications", 2);
+
+            // Пример последних действий
+            model.addAttribute("recentActivities", List.of(
+                    new Activity("Создал проект 'Модуль А'", LocalDateTime.now().minusHours(2)),
+                    new Activity("Изменен документ 'Чертеж-001'", LocalDateTime.now().minusDays(1)),
+                    new Activity("Утверждена спецификация", LocalDateTime.now().minusDays(2))
+            ));
+
+            return "home"; // имя шаблона Thymeleaf (home.html)
+        }
+
+
+
+        @GetMapping("/home2")
+    public String home2(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         if (userDetails != null) {
             PdmUser user = pdmUserRepository.findByUsername(userDetails.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            model.addAttribute("user", user);
+            model.addAttribute("pdmUser", user);
         }
-        return "home2";
+        return "home";
+    }
+
+    public static class Activity {
+        private String description;
+        private LocalDateTime date;
+
+        public Activity(String description, LocalDateTime date) {
+            this.description = description;
+            this.date = date;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public LocalDateTime getDate() {
+            return date;
+        }
     }
 }
