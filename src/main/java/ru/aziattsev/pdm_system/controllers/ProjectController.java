@@ -35,6 +35,12 @@ public class ProjectController {
         model.addAttribute("items", itemService.findAllByProjectId(id));
         return "projects/project";
     }
+    @GetMapping("/{id}/structure")
+    public String viewStructureHome(@PathVariable Long id, Model model) {
+        model.addAttribute("projectId", id);
+        model.addAttribute("structure", itemService.findAllByProjectId(id));
+        return "structure/home";
+    }
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("project", new CadProject());
