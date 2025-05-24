@@ -1,0 +1,193 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title th:text="${title}"></title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding: 2rem;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: none;
+    }
+    .card-header {
+      background-color: #0d6efd;
+      color: white;
+      border-radius: 10px 10px 0 0 !important;
+      font-weight: 500;
+      padding: 1.25rem;
+    }
+    .table-responsive {
+      border-radius: 0 0 10px 10px;
+    }
+    .table {
+      margin-bottom: 0;
+    }
+    .table th {
+      background-color: #f1f5fd;
+      border-top: none;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+    }
+    .table th:hover {
+      background-color: #e2e8f7;
+    }
+    .table th.sorted-asc::after {
+      content: "↑";
+      margin-left: 5px;
+    }
+    .table th.sorted-desc::after {
+      content: "↓";
+      margin-left: 5px;
+    }
+    .table-hover tbody tr:hover {
+      background-color: rgba(13, 110, 253, 0.05);
+    }
+    .back-btn {
+      margin-bottom: 1.5rem;
+    }
+    .part-no {
+      font-family: monospace;
+      color: #0d6efd;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a th:href="@{/projects/{id}/structure(id=${projectId})}" class="btn btn-outline-primary back-btn">
+    <i class="bi bi-arrow-left"></i> Назад к анализу структуры
+  </a>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div>
+        <i class="bi bi-collection"></i> <span th:text="${title}">Заголовок по умолчанию</span>
+      </div>
+      <div class="badge bg-light text-dark">
+        <i class="bi bi-list-check"></i> Всего: <span th:text="${list.size()}">0</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover table-striped" id="sortableTable">
+        <thead>
+        <tr>
+          <th onclick="sortTable(0)"><i class="bi bi-tag"></i> Обозначение</th>
+          <th onclick="sortTable(1)"><i class="bi bi-card-text"></i> Наименование</th>
+          <th class="text-end" onclick="sortNumericColumn(2)"><i class="bi bi-123"></i> Количество</th>
+          <th th:if="${showSpecSection}" onclick="sortTable(3)"><i class="bi bi-folder"></i> Раздел спецификации</th>
+          <th th:if="${showParentStructure}"
+              th:data-column-index="${showSpecSection} ? 4 : 3"
+              onclick="sortTable(this.getAttribute('data-column-index'))">
+            <i class="bi bi-diagram-2"></i> Куда входит
+          </th>        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="engineeringElementDto : ${list}">
+          <td class="part-no" th:utext="${engineeringElementDto.designation}"></td>
+          <td th:utext="${engineeringElementDto.name}"></td>
+          <td class="text-end" th:utext="${engineeringElementDto.quantity}"></td>
+          <td th:if="${showSpecSection}" th:utext="${engineeringElementDto.section}"></td>
+          <td th:if="${showParentStructure}" th:utext="${engineeringElementDto.parent}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentSortColumn = -1;
+    let sortDirection = 1;
+
+    // Функция для сортировки числовых колонок
+    function sortNumericColumn(columnIndex) {
+      const table = document.getElementById("sortableTable");
+      const tbody = table.querySelector("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const headers = table.querySelectorAll("th");
+
+      // Сброс предыдущих индикаторов
+      headers.forEach(header => {
+        header.classList.remove("sorted-asc", "sorted-desc");
+      });
+
+      // Определение направления сортировки
+      if (currentSortColumn === columnIndex) {
+        sortDirection *= -1;
+      } else {
+        currentSortColumn = columnIndex;
+        sortDirection = 1;
+      }
+
+      // Добавление индикатора
+      headers[columnIndex].classList.add(sortDirection === 1 ? "sorted-asc" : "sorted-desc");
+
+      // Сортировка с учетом числовых значений
+      rows.sort((a, b) => {
+        const aCell = a.cells[columnIndex];
+        const bCell = b.cells[columnIndex];
+
+        if (!aCell || !bCell) return 0;
+
+        // Парсим текст ячейки, заменяя запятые на точки
+        const aValue = parseFloat(aCell.textContent.trim().replace(',', '.')) || 0;
+        const bValue = parseFloat(bCell.textContent.trim().replace(',', '.')) || 0;
+
+        return (aValue - bValue) * sortDirection;
+      });
+
+      // Обновление таблицы
+      tbody.innerHTML = '';
+      rows.forEach(row => tbody.appendChild(row));
+    }
+
+    // Обычная текстовая сортировка для других колонок
+    function sortTable(columnIndex) {
+      const table = document.getElementById("sortableTable");
+      const tbody = table.querySelector("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const headers = table.querySelectorAll("th");
+
+      // Сброс предыдущих индикаторов
+      headers.forEach(header => {
+        header.classList.remove("sorted-asc", "sorted-desc");
+      });
+
+      // Определение направления сортировки
+      if (currentSortColumn === columnIndex) {
+        sortDirection *= -1;
+      } else {
+        currentSortColumn = columnIndex;
+        sortDirection = 1;
+      }
+
+      // Добавление индикатора
+      headers[columnIndex].classList.add(sortDirection === 1 ? "sorted-asc" : "sorted-desc");
+
+      // Сортировка
+      rows.sort((a, b) => {
+        const aCell = a.cells[columnIndex];
+        const bCell = b.cells[columnIndex];
+
+        if (!aCell || !bCell) return 0;
+
+        const aValue = aCell.textContent.trim();
+        const bValue = bCell.textContent.trim();
+
+        return aValue.localeCompare(bValue) * sortDirection;
+      });
+
+      // Обновление таблицы
+      tbody.innerHTML = '';
+      rows.forEach(row => tbody.appendChild(row));
+    }
+  </script>
+</body>
+</html>

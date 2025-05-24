@@ -13,6 +13,9 @@ public class EngineeringElement {
     @JoinColumn(name = "tree_id", nullable = false)
     private XmlTree tree;
 
+    @ManyToOne
+    @JoinColumn(name = "cadProject_id", nullable = false)
+    private CadProject cadProject;
     private String objectId;
 
     @ManyToOne
@@ -29,7 +32,7 @@ public class EngineeringElement {
     private String section;        // Раздел
     private String material;       // Марка материала
     private String unit;           // Единица измерения
-    private Integer quantity;      // Количество
+    private Double quantity;      // Количество
     private Double mass;           // Масса
     private String format;         // Формат
 
@@ -132,11 +135,11 @@ public class EngineeringElement {
         this.unit = unit;
     }
 
-    public Integer getQuantity() {
+    public Double getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(Integer quantity) {
+    public void setQuantity(Double quantity) {
         this.quantity = quantity;
     }
 
@@ -162,6 +165,14 @@ public class EngineeringElement {
 
     public void setItem(Item item) {
         this.item = item;
+    }
+
+    public CadProject getCadProject() {
+        return cadProject;
+    }
+
+    public void setCadProject(CadProject cadProject) {
+        this.cadProject = cadProject;
     }
 }
 

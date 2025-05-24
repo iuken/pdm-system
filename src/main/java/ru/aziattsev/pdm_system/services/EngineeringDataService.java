@@ -8,10 +8,7 @@ import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.aziattsev.pdm_system.entity.ElementParameter;
-import ru.aziattsev.pdm_system.entity.EngineeringElement;
-import ru.aziattsev.pdm_system.entity.Item;
-import ru.aziattsev.pdm_system.entity.XmlTree;
+import ru.aziattsev.pdm_system.entity.*;
 import ru.aziattsev.pdm_system.repository.*;
 
 import java.io.File;
@@ -33,19 +30,23 @@ public class EngineeringDataService {
 
     private final DocumentRepository documentRepository;
 
+    private final CadProjectRepository cadProjectRepository;
+
     public EngineeringDataService(XmlTreeRepository xmlTreeRepository,
                                   EngineeringElementRepository elementRepository,
                                   ElementParameterRepository parameterRepository,
                                   ItemRepository itemRepository,
-                                  DocumentRepository documentRepository) {
+                                  DocumentRepository documentRepository, CadProjectRepository cadProjectRepository) {
         this.xmlTreeRepository = xmlTreeRepository;
         this.elementRepository = elementRepository;
         this.parameterRepository = parameterRepository;
         this.itemRepository = itemRepository;
         this.documentRepository = documentRepository;
+        this.cadProjectRepository = cadProjectRepository;
     }
 
-    public void importXmlFile(String filePath) throws Exception {
+    public void importXmlFile(String filePath, Long projectId) throws Exception {
+        CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
         XmlTree newTree = new XmlTree();
         xmlTreeRepository.save(newTree);
 
@@ -54,13 +55,13 @@ public class EngineeringDataService {
         try {
             Document doc = Jsoup.parse(xmlFile, null, "", Parser.xmlParser());
             org.jsoup.nodes.Element rootElement = doc.selectFirst("Element");
-            parseElement(rootElement, null, newTree);
+            parseElement(rootElement, null, newTree, cadProject);
         } catch (IOException e) {
 
         }
     }
 
-    private void parseElement(Element xmlElement, EngineeringElement parent, XmlTree tree) {
+    private void parseElement(Element xmlElement, EngineeringElement parent, XmlTree tree, CadProject cadProject) {
         String objectId = xmlElement.attributes().get("ObjectId");
 
         EngineeringElement engineeringElement = new EngineeringElement();
@@ -75,14 +76,15 @@ public class EngineeringDataService {
 
         parameters = parseParameter(xmlParameters);
         applyParametersToElement(engineeringElement, parameters);
+        engineeringElement.setCadProject(cadProject);
         elementRepository.save(engineeringElement);
 
         if (xmlChildren != null) {
 
             Element firstChild = xmlChildren.selectFirst("Element");
-            parseElement(firstChild, engineeringElement, tree);
+            parseElement(firstChild, engineeringElement, tree, cadProject);
             for (Element child : xmlChildren.selectFirst("Element").siblingElements())
-                parseElement(child, engineeringElement, tree);
+                parseElement(child, engineeringElement, tree, cadProject);
         }
 
     }
@@ -163,7 +165,7 @@ public class EngineeringDataService {
         // Обрабатываем числовые значения
         try {
             element.setQuantity(paramMap.containsKey("Количество")
-                    ? Integer.parseInt(paramMap.get("Количество"))
+                    ? Double.parseDouble(paramMap.get("Количество"))
                     : null);
         } catch (NumberFormatException e) {
             element.setQuantity(null);

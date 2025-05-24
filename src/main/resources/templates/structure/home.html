@@ -42,10 +42,18 @@
             padding-bottom: 1rem;
             border-bottom: 2px solid #0d6efd;
         }
+        .back-btn {
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <!-- Кнопка возврата к проекту -->
+    <a th:href="@{/projects/{id}(id=${projectId})}" class="btn btn-outline-secondary back-btn">
+        <i class="bi bi-arrow-left"></i> Вернуться к проекту
+    </a>
+
     <h1 class="main-title text-center">
         <i class="bi bi-diagram-3-fill"></i> Анализ структуры изделия: <span th:text="${assemblyName}" class="text-primary"></span>
     </h1>

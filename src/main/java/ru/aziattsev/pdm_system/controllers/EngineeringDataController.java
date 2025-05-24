@@ -29,7 +29,7 @@ public class EngineeringDataController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<ApiResponse> importXmlFile(@RequestParam String filePath) {
+    public ResponseEntity<ApiResponse> importXmlFile(@RequestParam String filePath, Long projectId) {
         try {
             if (!Files.exists(Path.of(filePath))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -41,7 +41,7 @@ public class EngineeringDataController {
                         .body(new ApiResponse(false, "Указанный файл не является XML файлом"));
             }
 
-            dataService.importXmlFile(filePath);
+            dataService.importXmlFile(filePath, projectId);
             dataService.linkElementsToItems();
             itemService.updateFromProjectStructure();
 
