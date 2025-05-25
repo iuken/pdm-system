@@ -66,7 +66,7 @@ public class DocumentService {
 
     @Transactional
     public void updateFromCad(DocumentRequest documentRequest) {
-        Optional<Document> document1 = documentRepository.findFirstByFilePath(documentRequest.filePath());
+        Optional<Document> document1 = documentRepository.findFirstByFilePath(PathConverter.toServerPath(documentRequest.filePath()));
         DocumentStatus documentStatus = DocumentStatus.UNDEFINED;
         Document document;
         if (document1.isPresent()) {

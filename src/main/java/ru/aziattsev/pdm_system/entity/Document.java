@@ -2,6 +2,7 @@ package ru.aziattsev.pdm_system.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import ru.aziattsev.pdm_system.services.PathConverter;
 
 import java.util.Date;
 
@@ -102,7 +103,7 @@ public class Document {
     }
 
     public String getFilePath() {
-        return filePath;
+        return PathConverter.toClientPath(filePath);
     }
 
     public void setFilePath(String filePath) {

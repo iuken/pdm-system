@@ -34,12 +34,13 @@ public class CadProjectService {
     }
 
     public Optional<CadProject> findById(Long id) {
-        return repository.findById(id).map(project -> {
-            project.setDirectory(PathConverter.toClientPath(project.getDirectory()));
-            project.setMainAssemblyPath(PathConverter.toClientPath(project.getMainAssemblyPath()));
-            project.setStructurePath(PathConverter.toClientPath(project.getStructurePath()));
-            return project;
-        });
+//        return repository.findById(id).map(project -> {
+//            project.setDirectory(PathConverter.toClientPath(project.getDirectory()));
+//            project.setMainAssemblyPath(PathConverter.toClientPath(project.getMainAssemblyPath()));
+//            project.setStructurePath(PathConverter.toClientPath(project.getStructurePath()));
+//            return project;
+//        });
+        return repository.findById(id);
     }
 
     public void deleteById(Long id) {

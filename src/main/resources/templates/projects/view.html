@@ -16,9 +16,9 @@
         <div class="card-body">
             <h5 class="card-title" th:text="${project.name}">Project Name</h5>
             <p class="card-text">
-                <strong>Directory:</strong> <span th:text="${project.directory}"></span><br>
-                <strong>Main Assembly:</strong> <span th:text="${project.mainAssemblyPath}"></span><br>
-                <strong>Structure Path:</strong> <span th:text="${project.structurePath}"></span><br>
+                <strong>Directory:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.directory)}"></span><br>
+                <strong>Main Assembly:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.mainAssemblyPath)}"></span><br>
+                <strong>Structure Path:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.structurePath)}"></span><br>
                 <strong>Info:</strong> <span th:text="${project.info}"></span>
             </p>
 
