@@ -4,33 +4,61 @@
     <meta charset="UTF-8">
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
-    <title>Editable Items Table</title>
+    <title>Документы</title>
+    <!-- Подключаем Bootstrap CSS и иконки -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 2rem;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+
+        .card-header {
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 500;
+            padding: 1.25rem;
+        }
+
         .table-container {
-            width: 800px;
+            width: 100%;
             height: 800px;
             overflow: auto;
-            resize: both;
-            border: 1px solid #ccc;
-            margin: 20px 0;
-            position: relative;
+            border-radius: 0 0 10px 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 0;
         }
 
         #items-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 0;
         }
 
         #items-table th, #items-table td {
-            border: 1px solid #ddd;
+            border: 1px solid #dee2e6;
             padding: 8px;
             min-width: 100px;
         }
 
         #items-table th {
-            background-color: #f2f2f2;
+            background-color: #f1f5fd;
+            border-top: none;
+            font-weight: 600;
             position: sticky;
             top: 0;
+        }
+
+        #items-table th:hover {
+            background-color: #e2e8f7;
         }
 
         .editable {
@@ -59,72 +87,117 @@
             -moz-user-select: none;
             -webkit-user-select: none;
         }
+
+        .back-btn {
+            margin-bottom: 1.5rem;
+        }
+
+        .top-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .badge-count {
+            background-color: #f8f9fa;
+            color: #212529;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
-<button id="save-btn">Сохранить изменения</button>
+<div class="container-fluid">
 
-<div class="table-container">
-    <table id="items-table">
-        <thead>
-        <tr>
-            <th class="resizable-th">ID
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Производитель
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Количество
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Цена
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Статус
-                <div class="resize-handle"></div>
-            </th>
-            <!-- Колонки для документа -->
-            <th class="resizable-th">Файл
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Название
-                <div class="resize-handle"></div>
-            </th>
-            <th class="resizable-th">Материал
-                <div class="resize-handle"></div>
-            </th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="item : ${items}">
-            <td th:text="${item.id}"></td>
-            <td class="editable" contenteditable="true"
-                data-field="manufacturer"
-                th:data-id="${item.id}"
-                th:text="${item.manufacturer}"></td>
-            <td class="editable" contenteditable="true"
-                data-field="quantity"
-                th:data-id="${item.id}"
-                th:text="${item.quantity}"></td>
-            <td class="editable" contenteditable="true"
-                data-field="price"
-                th:data-id="${item.id}"
-                th:text="${#numbers.formatDecimal(item.price, 1, 2)}"></td>
-            <td class="editable" contenteditable="true"
-                data-field="status"
-                th:data-id="${item.id}"
-                th:text="${item.status}"></td>
-            <!-- Поля документа (не редактируемые) -->
-            <td th:text="${item.document?.filePath}"></td>
-            <td th:text="${item.document?.name}"></td>
-            <td th:text="${item.document?.material2}"></td>
-        </tr>
-        </tbody>
-    </table>
+    <!-- Кнопка возврата -->
+    <div class="top-panel">
+        <a href="#" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> К проекту
+        </a>
+        <button id="save-btn" class="btn btn-success">
+            <i class="bi bi-save"></i> Сохранить изменения
+        </button>
+    </div>
+
+    <!-- Карточка с таблицей -->
+    <div class="card">
+        <!-- Шапка карточки -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-table"></i> Документы
+            </div>
+            <div class="badge badge-count">
+                <i class="bi bi-list-check"></i> Всего: <span th:text="${items.size()}">0</span>
+            </div>
+        </div>
+
+        <!-- Контейнер таблицы -->
+        <div class="table-container">
+            <table id="items-table" class="table table-hover">
+                <thead>
+                <tr>
+                    <th class="resizable-th">ID
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Производитель
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Количество
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Цена
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Статус
+                        <div class="resize-handle"></div>
+                    </th>
+                    <!-- Колонки для документа -->
+                    <th class="resizable-th">Файл
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Название
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Материал
+                        <div class="resize-handle"></div>
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${items}">
+                    <td th:text="${item.id}"></td>
+                    <td class="editable" contenteditable="true"
+                        data-field="manufacturer"
+                        th:data-id="${item.id}"
+                        th:text="${item.manufacturer}"></td>
+                    <td class="editable" contenteditable="true"
+                        data-field="quantity"
+                        th:data-id="${item.id}"
+                        th:text="${item.quantity}"></td>
+                    <td class="editable" contenteditable="true"
+                        data-field="price"
+                        th:data-id="${item.id}"
+                        th:text="${#numbers.formatDecimal(item.price, 1, 2)}"></td>
+                    <td class="editable" contenteditable="true"
+                        data-field="status"
+                        th:data-id="${item.id}"
+                        th:text="${item.status}"></td>
+                    <!-- Поля документа (не редактируемые) -->
+                    <td th:text="${item.document?.filePath}"></td>
+                    <td th:text="${item.document?.name}"></td>
+                    <td th:text="${item.document?.material2}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
+<!-- Подключаем Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script th:inline="javascript">
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const table = document.getElementById('items-table');
         const saveBtn = document.getElementById('save-btn');
         const modifiedCells = new Set();
@@ -136,11 +209,11 @@
 
         // Обработка редактирования ячеек
         table.querySelectorAll('.editable').forEach(cell => {
-            cell.addEventListener('focus', function() {
+            cell.addEventListener('focus', function () {
                 this.classList.add('editing');
             });
 
-            cell.addEventListener('blur', function() {
+            cell.addEventListener('blur', function () {
                 this.classList.remove('editing');
                 const originalValue = this.getAttribute('data-original');
                 const currentValue = this.textContent.trim();
@@ -155,7 +228,7 @@
             });
         });
         // Обработка кнопки сохранения
-        saveBtn.addEventListener('click', function() {
+        saveBtn.addEventListener('click', function () {
             if (modifiedCells.size === 0) {
                 alert('Нет изменений для сохранения');
                 return;
@@ -178,7 +251,7 @@
                 }
 
                 if (!itemsMap.has(itemId)) {
-                    itemsMap.set(itemId, { id: itemId });
+                    itemsMap.set(itemId, {id: itemId});
                 }
                 itemsMap.get(itemId)[field] = value;
 
@@ -213,37 +286,36 @@
                 });
         });
 
-    // Реализация изменения ширины колонок
-    document.querySelectorAll('.resizable-th').forEach(th => {
-        const handle = th.querySelector('.resize-handle');
-        handle.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-            const startX = e.clientX;
-            const startWidth = th.offsetWidth;
+        // Реализация изменения ширины колонок
+        document.querySelectorAll('.resizable-th').forEach(th => {
+            const handle = th.querySelector('.resize-handle');
+            handle.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = th.offsetWidth;
 
-            function doDrag(e) {
-                const newWidth = startWidth + e.clientX - startX;
-                th.style.width = newWidth + 'px';
-                // Обновляем ширину всех ячеек в колонке
-                const colIndex = Array.from(th.parentNode.children).indexOf(th);
-                const rows = table.querySelectorAll('tr');
-                rows.forEach(row => {
-                    const cell = row.children[colIndex];
-                    if (cell) cell.style.width = newWidth + 'px';
-                });
-            }
+                function doDrag(e) {
+                    const newWidth = startWidth + e.clientX - startX;
+                    th.style.width = newWidth + 'px';
+                    // Обновляем ширину всех ячеек в колонке
+                    const colIndex = Array.from(th.parentNode.children).indexOf(th);
+                    const rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const cell = row.children[colIndex];
+                        if (cell) cell.style.width = newWidth + 'px';
+                    });
+                }
 
-            function stopDrag() {
-                document.removeEventListener('mousemove', doDrag);
-                document.removeEventListener('mouseup', stopDrag);
-            }
+                function stopDrag() {
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
 
-            document.addEventListener('mousemove', doDrag);
-            document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+            });
         });
     });
-    })
-    ;
 </script>
 </body>
 </html>
