@@ -30,10 +30,18 @@ public class ProjectController {
         return "projects/view";
     }
 
-    @GetMapping("/{id}/items")
+    @GetMapping("/{id}/manufacturing_details")
     public String viewProjectItems(@PathVariable Long id, Model model) {
         model.addAttribute("items", itemService.findAllByProjectId(id));
-        return "projects/project";
+        projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
+        return "projects/manufacturing_details";
+    }
+
+    @GetMapping("/{id}/documents")
+    public String viewProjectDocuments(@PathVariable Long id, Model model) {
+        model.addAttribute("items", itemService.findAllByProjectId(id));
+        projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
+        return "projects/documents";
     }
     @GetMapping("/{id}/structure")
     public String viewStructureHome(@PathVariable Long id, Model model) {

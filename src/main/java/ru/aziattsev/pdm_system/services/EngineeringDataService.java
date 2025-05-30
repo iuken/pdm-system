@@ -166,9 +166,9 @@ public class EngineeringDataService {
         try {
             element.setQuantity(paramMap.containsKey("Количество")
                     ? Double.parseDouble(paramMap.get("Количество"))
-                    : null);
+                    : 0d);
         } catch (NumberFormatException e) {
-            element.setQuantity(null);
+            element.setQuantity(0d);
         }
 
         try {
@@ -196,7 +196,7 @@ public class EngineeringDataService {
                             Item newItem = new Item();
                             newItem.setDocument(matchingDocument.get());
                             newItem.setQuantity(element.getQuantity() != null ?
-                                    element.getQuantity().toString() : "0");
+                                    element.getQuantity() : 0d);
                             return itemRepository.save(newItem);
                         });
 

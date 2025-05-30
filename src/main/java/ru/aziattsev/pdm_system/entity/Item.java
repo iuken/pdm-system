@@ -26,7 +26,7 @@ public class Item {
 
 //    private String participants;
     @Column
-    private String quantity;
+    private Double quantity;
 
     @Column
     private String material;
@@ -41,7 +41,7 @@ public class Item {
     private String manufacturer;
 
     @Column
-    private String price;
+    private Double price;
 
     @Column
     private Priority priority;
@@ -61,6 +61,8 @@ public class Item {
     public Item(Document document) {
         this.project = document.getProject();
         this.document = document;
+        this.price = 0d;
+        this.quantity = 0d;
     }
 
     public Long getId() {
@@ -95,11 +97,11 @@ public class Item {
         this.participants = participants;
     }
 
-    public String getQuantity() {
+    public Double getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(String quantity) {
+    public void setQuantity(Double quantity) {
         this.quantity = quantity;
     }
 
@@ -135,11 +137,11 @@ public class Item {
         this.manufacturer = manufacturer;
     }
 
-    public String getPrice() {
+    public Double getPrice() {
         return price;
     }
 
-    public void setPrice(String price) {
+    public void setPrice(Double price) {
         this.price = price;
     }
 

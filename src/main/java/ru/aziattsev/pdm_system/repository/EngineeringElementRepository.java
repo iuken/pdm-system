@@ -23,7 +23,7 @@ public interface EngineeringElementRepository extends JpaRepository<EngineeringE
     List<EngineeringElement> findByNameAndDesignation(String name, String designation);
 
     @Query("SELECT SUM(e.quantity) FROM EngineeringElement e WHERE e.item = :item")
-    Integer sumQuantityByItem(@Param("item") Item item);
+    Double sumQuantityByItem(@Param("item") Item item);
 
     @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.designation, e.name, e.section, SUM(e.quantity), '') " +
             "FROM EngineeringElement e " +

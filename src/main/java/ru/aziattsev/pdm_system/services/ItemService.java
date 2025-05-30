@@ -55,13 +55,13 @@ public class ItemService {
 
         for (Item item : items) {
             // Суммируем quantity всех связанных EngineeringElement
-            Integer totalQuantity = elementRepository.sumQuantityByItem(item);
+            Double totalQuantity = elementRepository.sumQuantityByItem(item);
 
             // Обновляем quantity в Item
             if (totalQuantity != null) {
-                item.setQuantity(String.valueOf(totalQuantity));
+                item.setQuantity(totalQuantity);
             } else {
-                item.setQuantity("0"); // или другое значение по умолчанию
+                item.setQuantity(0d); // или другое значение по умолчанию
             }
         }
 

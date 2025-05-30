@@ -9,36 +9,38 @@
 </head>
 <body>
 <div class="container mt-4">
-    <a th:href="@{/projects}" class="btn btn-secondary">Back to Projects</a>
-    <h1>Project Details</h1>
+    <a th:href="@{/projects}" class="btn btn-secondary">В проекты</a>
+    <h1 class="card-title" th:text="${project.name}">Project Name</h1>
 
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title" th:text="${project.name}">Project Name</h5>
             <p class="card-text">
-                <strong>Directory:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.directory)}"></span><br>
-                <strong>Main Assembly:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.mainAssemblyPath)}"></span><br>
-                <strong>Structure Path:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.structurePath)}"></span><br>
-                <strong>Info:</strong> <span th:text="${project.info}"></span>
+                <strong>Рабочая папка:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.directory)}"></span><br>
+                <strong>Общая сборка:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.mainAssemblyPath)}"></span><br>
+                <strong>Структура изделия:</strong> <span th:text="${T(ru.aziattsev.pdm_system.services.PathConverter).toClientPath(project.structurePath)}"></span><br>
+                <strong>Информация:</strong> <span th:text="${project.info}"></span>
             </p>
 
             <div class="d-flex align-items-center gap-2 mb-3">
                 <!-- Кнопка для импорта XML -->
                 <button type="button" class="btn btn-primary" id="importXmlBtn">
-                    Import Structure XML
+                    Обновить структуру объектов изделия
                 </button>
 
                 <!-- Кнопка для обновления информации о документах -->
                 <button type="button" class="btn btn-info" id="updateDocsBtn">
-                    Update Documents Info
+                    Обновить документацию
                 </button>
 
                 <!-- Кнопка-ссылка для просмотра элементов проекта -->
-                <a th:href="@{/projects/{id}/items(id=${project.id})}" class="btn btn-success">
-                    View Project Items
+                <a th:href="@{/projects/{id}/documents(id=${project.id})}" class="btn btn-success">
+                    Менеджер документации
+                </a>
+                <a th:href="@{/projects/{id}/manufacturing_details(id=${project.id})}" class="btn btn-success">
+                    Подготовка производства
                 </a>
                 <a th:href="@{/projects/{id}/structure(id=${project.id})}" class="btn btn-success">
-                    Анализ СИ
+                    Анализ структуры изделия
                 </a>
             </div>
 
