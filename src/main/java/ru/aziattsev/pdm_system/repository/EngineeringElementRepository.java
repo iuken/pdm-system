@@ -25,58 +25,98 @@ public interface EngineeringElementRepository extends JpaRepository<EngineeringE
     @Query("SELECT SUM(e.quantity) FROM EngineeringElement e WHERE e.item = :item")
     Double sumQuantityByItem(@Param("item") Item item);
 
-    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.designation, e.name, e.section, SUM(e.quantity), '') " +
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.fullDesignation, e.name, e.section, SUM(e.quantity), '') " +
             "FROM EngineeringElement e " +
             "WHERE e.section = :section AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name, e.section")
-    List<EngineeringElementDto> sumQuantityByDesignationInSection(@Param("section") String section,
+            "GROUP BY e.fullDesignation, e.name, e.section")
+    List<EngineeringElementDto> sumQuantityByFullDesignationInSection(@Param("section") String section,
                                                        @Param("cadProjectId") Long cadProjectId);
 
-    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.designation, e.name, e.section, SUM(e.quantity), '') " +
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.fullDesignation, e.name, e.section, SUM(e.quantity), '') " +
             "FROM EngineeringElement e " +
             "WHERE e.section IN :section AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name ,e.section")
-    List<EngineeringElementDto> sumQuantityByDesignationInSection(@Param("section") List<String> section,
+            "GROUP BY e.fullDesignation, e.name ,e.section")
+    List<EngineeringElementDto> sumQuantityByFullDesignationInSection(@Param("section") List<String> section,
                                                          @Param("cadProjectId") Long cadProjectId);
 
-    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.designation, e.name, e.section, SUM(e.quantity), '') " +
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(e.fullDesignation, e.name, e.section, SUM(e.quantity), '') " +
             "FROM EngineeringElement e " +
             "WHERE e.section NOT  IN :section AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name, e.section")
-    List<EngineeringElementDto> sumQuantityByDesignationNotInSection(@Param("section") List<String> section,
+            "GROUP BY e.fullDesignation, e.name, e.section")
+    List<EngineeringElementDto> sumQuantityByFullDesignationNotInSection(@Param("section") List<String> section,
                                                          @Param("cadProjectId") Long cadProjectId);
 
 
     @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
-            "e.designation, e.name, e.section, SUM(e.quantity), " +
-            "COALESCE(parent.designation, '')) " +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), " +
+            "COALESCE(parent.fullDesignation, '')) " +
             "FROM EngineeringElement e " +
             "LEFT JOIN e.parent parent " +
             "WHERE e.section = :section AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name, e.section, parent.designation")
-    List<EngineeringElementDto> sumQuantityByDesignationInSectionWithParent(
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> sumQuantityByFullDesignationInSectionWithParent(
             @Param("section") String section,
             @Param("cadProjectId") Long cadProjectId);
 
     @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
-            "e.designation, e.name, e.section, SUM(e.quantity), " +
-            "COALESCE(parent.designation, '')) " +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), " +
+            "COALESCE(parent.fullDesignation, '')) " +
             "FROM EngineeringElement e " +
             "LEFT JOIN e.parent parent " +
             "WHERE e.section IN :sections AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name, e.section, parent.designation")
-    List<EngineeringElementDto> sumQuantityByDesignationInSectionsWithParent(
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> sumQuantityByFullDesignationInSectionsWithParent(
             @Param("sections") List<String> sections,
             @Param("cadProjectId") Long cadProjectId);
 
     @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
-            "e.designation, e.name, e.section, SUM(e.quantity), " +
-            "COALESCE(parent.designation, '')) " +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), " +
+            "COALESCE(parent.fullDesignation, '')) " +
             "FROM EngineeringElement e " +
             "LEFT JOIN e.parent parent " +
             "WHERE e.section NOT IN :sections AND e.cadProject.id = :cadProjectId " +
-            "GROUP BY e.designation, e.name, e.section, parent.designation")
-    List<EngineeringElementDto> sumQuantityByDesignationNotInSectionsWithParent(
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> sumQuantityByFullDesignationNotInSectionsWithParent(
             @Param("sections") List<String> sections,
             @Param("cadProjectId") Long cadProjectId);
+
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), COALESCE(parent.fullDesignation, '')) " +
+            "FROM EngineeringElement e " +
+            "LEFT JOIN e.parent parent " +
+            "WHERE e.cadProject.id = :cadProjectId " +
+            "AND e.fullDesignation <> '' " +
+            "AND e.fullDesignation IN (" +
+            "   SELECT e2.fullDesignation " +
+            "   FROM EngineeringElement e2 " +
+            "   WHERE e2.fullDesignation <> '' " +
+            "   GROUP BY e2.fullDesignation " +
+            "   HAVING COUNT(DISTINCT e2.name) > 1" +
+            ") " +
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> findBySameDesignationAndDifferentNames(@Param("cadProjectId") Long cadProject);
+
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), " +
+            "COALESCE(parent.fullDesignation, '')) " +
+            "FROM EngineeringElement e " +
+            "LEFT JOIN e.parent parent " +
+            "WHERE e.section = 'Сборочные единицы' " +
+            "AND e.cadProject.id = :cadProjectId " +
+            "AND NOT EXISTS (" +
+            "    SELECT 1 FROM EngineeringElement child " +
+            "    WHERE child.parent.fullDesignation = e.fullDesignation" +
+            ") " +
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> findUnusedAssemblyUnits(
+            @Param("cadProjectId") Long cadProjectId);
+
+    @Query("SELECT new ru.aziattsev.pdm_system.dto.EngineeringElementDto(" +
+            "e.fullDesignation, e.name, e.section, SUM(e.quantity), " +
+            "COALESCE(parent.fullDesignation, '')) " +
+            "FROM EngineeringElement e " +
+            "LEFT JOIN e.parent parent " +
+            "WHERE e.name LIKE %:pattern% " +
+            "GROUP BY e.fullDesignation, e.name, e.section, parent.fullDesignation")
+    List<EngineeringElementDto> findByName(@Param("pattern") String pattern);
 }

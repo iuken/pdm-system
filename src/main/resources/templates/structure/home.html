@@ -2,6 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Анализ структуры изделия</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -45,10 +47,38 @@
         .back-btn {
             margin-bottom: 1.5rem;
         }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <!-- Toast уведомления -->
+    <div class="toast-container">
+        <div id="successToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <span id="successMessage">Данные успешно обновлены</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-white bg-danger" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="errorMessage">Ошибка при обновлении данных</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Кнопка возврата к проекту -->
     <a th:href="@{/projects/{id}(id=${projectId})}" class="btn btn-outline-secondary back-btn">
         <i class="bi bi-arrow-left"></i> Вернуться к проекту
@@ -67,13 +97,13 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a th:href="@{/projects/{id}/structure/refresh(id=${projectId})}" class="btn btn-outline-primary text-start">
+                        <button id="updateDataBtn" type="button" class="btn btn-outline-primary text-start">
                             <i class="bi bi-arrow-clockwise"></i> Обновить данные
-                        </a>
-                        <a th:href="@{/projects/{id}/structure/check(id=${projectId})}" class="btn btn-outline-primary text-start">
+                        </button>
+                        <a th:href="@{/projects/{id}/structure/check2(id=${projectId})}" class="btn btn-outline-primary text-start">
                             <i class="bi bi-exclamation-triangle"></i> Проверить сборки без вложенных элементов
                         </a>
-                        <a th:href="@{/projects/{id}/structure/check2(id=${projectId})}" class="btn btn-outline-primary text-start">
+                        <a th:href="@{/projects/{id}/structure/check1(id=${projectId})}" class="btn btn-outline-primary text-start">
                             <i class="bi bi-files-alt"></i> ДСЕ с одинаковым обозначением и разным наименованием
                         </a>
                         <a th:href="@{/projects/{id}/structure/list(id=${projectId})}" class="btn btn-outline-primary text-start">
@@ -140,5 +170,43 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const updateBtn = document.getElementById('updateDataBtn');
+        const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+        const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
+
+        updateBtn.addEventListener('click', async () => {
+            try {
+                updateBtn.disabled = true;
+                updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновление...';
+
+                const csrfToken = document.querySelector('meta[name="_csrf"]').content;
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').content;
+
+                const response = await fetch(`/projects/${[[${projectId}]]}/structure/update`, {
+                    method: 'POST',
+                    headers: {
+                        [csrfHeader]: csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const result = await response.json();
+                const message = result.message || (result.success ? 'Данные обновлены' : 'Ошибка');
+
+                document.getElementById(result.success ? 'successMessage' : 'errorMessage').textContent = message;
+                (result.success ? successToast : errorToast).show();
+
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = 'Ошибка: ' + error.message;
+                errorToast.show();
+            } finally {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить данные';
+            }
+        });
+    });
+</script>
 </body>
 </html>

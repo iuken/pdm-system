@@ -23,26 +23,32 @@ public class EngineeringElementService {
     }
 
     public List<EngineeringElementDto>  findAllBySection(String section, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationInSection(section, cadProject);
+        return elementRepository.sumQuantityByFullDesignationInSection(section, cadProject);
     }
 
     public List<EngineeringElementDto>  findAllBySection(List<String> sectionList, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationInSection(sectionList, cadProject);
+        return elementRepository.sumQuantityByFullDesignationInSection(sectionList, cadProject);
     }
 
     public List<EngineeringElementDto>  findAllExcludeSection(List<String> sectionList, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationNotInSection(sectionList, cadProject);
+        return elementRepository.sumQuantityByFullDesignationNotInSection(sectionList, cadProject);
     }
 
     public List<EngineeringElementDto>  findAllBySectionWithParent(String section, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationInSectionWithParent(section, cadProject);
+        return elementRepository.sumQuantityByFullDesignationInSectionWithParent(section, cadProject);
     }
 
     public List<EngineeringElementDto>  findAllBySectionWithParent(List<String> sectionList, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationInSectionsWithParent(sectionList, cadProject);
+        return elementRepository.sumQuantityByFullDesignationInSectionsWithParent(sectionList, cadProject);
     }
 
     public List<EngineeringElementDto>  findAllExcludeSectionWithParent(List<String> sectionList, Long cadProject) {
-        return elementRepository.sumQuantityByDesignationNotInSectionsWithParent(sectionList, cadProject);
+        return elementRepository.sumQuantityByFullDesignationNotInSectionsWithParent(sectionList, cadProject);
+    }
+    public List<EngineeringElementDto>  findBySameDesignationAndDifferentNames(Long cadProject) {
+        return elementRepository.findBySameDesignationAndDifferentNames(cadProject);
+    }
+    public List<EngineeringElementDto>  findUnusedAssemblyUnits(Long cadProject) {
+        return elementRepository.findUnusedAssemblyUnits(cadProject);
     }
 }

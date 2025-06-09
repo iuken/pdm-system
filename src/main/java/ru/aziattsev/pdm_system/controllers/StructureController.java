@@ -1,27 +1,83 @@
 package ru.aziattsev.pdm_system.controllers;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+import ru.aziattsev.pdm_system.entity.CadProject;
+import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.EngineeringElementRepository;
+import ru.aziattsev.pdm_system.services.EngineeringDataService;
 import ru.aziattsev.pdm_system.services.EngineeringElementService;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/projects/{id}/structure")
 public class StructureController {
     private final EngineeringElementRepository elementRepository;
+    private final CadProjectRepository cadProjectRepository;
     private final EngineeringElementService elementService;
+    private final EngineeringDataService dataService;
 
-    public StructureController(EngineeringElementRepository elementRepository, EngineeringElementService elementService) {
+
+    public StructureController(EngineeringElementRepository elementRepository, CadProjectRepository cadProjectRepository, EngineeringElementService elementService, EngineeringDataService dataService) {
         this.elementRepository = elementRepository;
+        this.cadProjectRepository = cadProjectRepository;
         this.elementService = elementService;
+        this.dataService = dataService;
     }
 
+
+
+    @PostMapping("/update")
+    @ResponseBody
+    public ResponseEntity<ApiResponse> importXmlFile(@PathVariable("id") Long projectId) {
+        try {
+            // 1. Получаем проект из репозитория
+            CadProject project = cadProjectRepository.findById(projectId)
+                    .orElseThrow(() -> new IllegalArgumentException("Проект с ID " + projectId + " не найден"));
+
+            // 2. Получаем путь к файлу из проекта
+            String filePath = project.getStructurePath();
+
+            // 3. Проверяем, что путь указан
+            if (filePath == null || filePath.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "Для проекта не указан путь к XML файлу структуры"));
+            }
+
+            // 4. Проверяем существование файла
+            if (!Files.exists(Path.of(filePath))) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse(false, "Файл не найден по указанному пути: " + filePath));
+            }
+
+            // 5. Проверяем расширение файла
+            if (!filePath.toLowerCase().endsWith(".xml")) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "Указанный файл не является XML файлом"));
+            }
+
+            // 6. Выполняем импорт
+            dataService.importXmlFile(filePath, projectId);
+
+            return ResponseEntity.ok()
+                    .body(new ApiResponse(true, "Данные успешно обновлены из файла: " + filePath));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(false, "Ошибка при импорте данных: " + e.getMessage()));
+        }
+    }
     @GetMapping("/list")
     public String getList(@PathVariable Long id, Model model) {
         model.addAttribute("projectId", id);
@@ -139,6 +195,44 @@ public class StructureController {
         return "structure/list";
     }
 
+    @GetMapping("/check1")
+    public String findBySameDesignationAndDifferentNames(@PathVariable Long id, Model model) {
+        model.addAttribute("projectId", id);
+        model.addAttribute("showSpecSection", true);
+        model.addAttribute("showParentStructure", true);
+        model.addAttribute("title", "ДСЕ с одинаковым обозначением и разным наименованием");
+        model.addAttribute("list", elementService.findBySameDesignationAndDifferentNames(id));
+        return "structure/list";
+    }
 
+    @GetMapping("/check2")
+    public String findUnusedAssemblyUnits(@PathVariable Long id, Model model) {
+        model.addAttribute("projectId", id);
+        model.addAttribute("showSpecSection", true);
+        model.addAttribute("showParentStructure", true);
+        model.addAttribute("title", "Сборки без вложенных элементов");
+        model.addAttribute("list", elementService.findUnusedAssemblyUnits(id));
+        return "structure/list";
+    }
+
+
+
+    public static class ApiResponse {
+        private boolean success;
+        private String message;
+
+        public ApiResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
+
+        // Геттеры
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+
+        // Сеттеры (если нужны)
+        public void setSuccess(boolean success) { this.success = success; }
+        public void setMessage(String message) { this.message = message; }
+    }
 
 }
