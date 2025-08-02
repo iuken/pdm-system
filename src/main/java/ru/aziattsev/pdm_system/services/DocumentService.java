@@ -36,24 +36,39 @@ public class DocumentService {
         CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
         File dir = new File(projectPath);
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
-            stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb")).map(file -> {
-                try {
-                    return new Document(file.toString(), new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis()), new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis()));
-                } catch (IOException e) {
-                    return new Document(file.toString());
-                }
-            }).peek(document -> document.setProject(cadProject))
+            stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb"))
+                    .map(file -> {
+                        try {
+                            String normalizedPath = file.toAbsolutePath().normalize().toString();
+                            String serverPath = PathConverter.toServerPath(normalizedPath);
+                            System.out.println(normalizedPath);
+                            Date creationTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis());
+                            Date lastModifiedTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
+                            return new Document(serverPath, creationTime, lastModifiedTime);
+                        } catch (IOException e) {
+                            String normalizedPath = file.toAbsolutePath().normalize().toString();
+                            String serverPath = PathConverter.toServerPath(normalizedPath);
+                            return new Document(serverPath);
+                        }
+                    })
+                    .peek(document -> document.setProject(cadProject))
                     .forEach(this::update);
         } catch (IOException e) {
+            e.printStackTrace(); // или логгер
         }
     }
 
 
     @Transactional
     public void update(Document document) {
+        System.out.println("внутри метода update");
         Optional<Document> document1 = documentRepository.findFirstByFilePath(document.getFilePath());
         if (document1.isPresent()) {
+            System.out.println("документ найден");
             document.setId(document1.get().getId());
+        }
+        if (!document1.isPresent()) {
+            System.out.println("документ не найден");
         }
         documentRepository.save(document);
 

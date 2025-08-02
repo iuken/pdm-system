@@ -13,7 +13,7 @@ public class Document {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column
-    private Long Id;
+    private Long id;
 
     @Column(unique = true)
     private String filePath;
@@ -95,14 +95,17 @@ public class Document {
     }
 
     public Long getId() {
-        return Id;
+        return id;
     }
 
     public void setId(Long id) {
-        Id = id;
+        this.id = id;
     }
 
     public String getFilePath() {
+        return filePath;
+    }
+    public String getClientFilePath() {
         return PathConverter.toClientPath(filePath);
     }
 

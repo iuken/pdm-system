@@ -10,9 +10,9 @@ import java.util.Optional;
 
 public interface DocumentRepository extends JpaRepository<Document, Long> {
     Optional<Document> findFirstByFilePath(String filePath);
-
+    Optional<Document> findByProjectIdAndDesignationAndName(Long projectId, String designation, String name);
     @Modifying
-    @Query("update Document set lastModifiedTime = :lastModifiedTime, creationTime = :creationTime where Id = :documentId")
+    @Query("update Document set lastModifiedTime = :lastModifiedTime, creationTime = :creationTime where id = :documentId")
     void setDocumentInfoById(Date lastModifiedTime, Date creationTime, Long documentId);
     Optional<Document> findByDesignationAndName(String designation, String name);
 //    void

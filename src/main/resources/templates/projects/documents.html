@@ -185,7 +185,7 @@
                         th:data-id="${item.id}"
                         th:text="${item.status}"></td>
                     <!-- Поля документа (не редактируемые) -->
-                    <td th:text="${item.document?.filePath}"></td>
+                    <td th:text="${item.document?.clientFilePath}"></td>
                     <td th:text="${item.document?.name}"></td>
                     <td th:text="${item.document?.material2}"></td>
                 </tr>
