@@ -3,6 +3,7 @@ package ru.aziattsev.pdm_system.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import ru.aziattsev.pdm_system.dto.ElementDocumentPair;
 import ru.aziattsev.pdm_system.dto.EngineeringElementDto;
 import ru.aziattsev.pdm_system.entity.EngineeringElement;
 import ru.aziattsev.pdm_system.entity.Item;
@@ -13,6 +14,7 @@ import java.util.Optional;
 
 public interface EngineeringElementRepository extends JpaRepository<EngineeringElement, Long> {
     List<EngineeringElement> findByTreeId(Long treeId);
+    List<EngineeringElement> findAllByCadProject_Id(Long projectId);
 
     List<EngineeringElement> findByParentId(Long parentId);
 
@@ -21,6 +23,19 @@ public interface EngineeringElementRepository extends JpaRepository<EngineeringE
     void deleteByTree(XmlTree tree);
 
     List<EngineeringElement> findByNameAndDesignation(String name, String designation);
+
+    void deleteByTreeId(Long treeId);
+    @Query("""
+    SELECT new ru.aziattsev.pdm_system.dto.ElementDocumentPair(e, d)
+    FROM EngineeringElement e
+    JOIN Document d
+      ON e.designation = d.designation AND e.name = d.name
+    WHERE e.cadProject.id = :projectId AND d.project.id = :projectId
+""")
+    List<ElementDocumentPair> findElementsWithDocumentsByProjectId(@Param("projectId") Long projectId);
+
+
+
 
     @Query("SELECT SUM(e.quantity) FROM EngineeringElement e WHERE e.item = :item")
     Double sumQuantityByItem(@Param("item") Item item);

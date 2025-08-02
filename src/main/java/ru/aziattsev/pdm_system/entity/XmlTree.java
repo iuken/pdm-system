@@ -18,7 +18,27 @@ public class XmlTree {
     @Column(updatable = false)
     @CreationTimestamp
     private LocalDateTime importDate;
+    // Добавляем связь ManyToOne на CadProject
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private CadProject project;
 
+    public XmlTree(CadProject cadProject) {
+        this.project = cadProject;
+    }
+
+    public XmlTree() {
+
+    }
+
+    // геттеры и сеттеры
+    public CadProject getProject() {
+        return project;
+    }
+
+    public void setProject(CadProject project) {
+        this.project = project;
+    }
     public Long getId() {
         return id;
     }

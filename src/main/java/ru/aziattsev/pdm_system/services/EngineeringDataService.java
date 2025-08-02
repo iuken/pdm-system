@@ -2,21 +2,19 @@ package ru.aziattsev.pdm_system.services;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.aziattsev.pdm_system.dto.ElementDocumentPair;
 import ru.aziattsev.pdm_system.entity.*;
+import ru.aziattsev.pdm_system.entity.Document;
 import ru.aziattsev.pdm_system.repository.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,13 +45,19 @@ public class EngineeringDataService {
 
     public void importXmlFile(String filePath, Long projectId) throws Exception {
         CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
-        XmlTree newTree = new XmlTree();
+        // Удаляем все старые деревья проекта и связанные элементы
+        List<XmlTree> existingTrees = xmlTreeRepository.findByProjectId(projectId);
+        for (XmlTree tree : existingTrees) {
+            elementRepository.deleteByTreeId(tree.getId());
+        }
+        xmlTreeRepository.deleteAll(existingTrees);
+        XmlTree newTree = new XmlTree(cadProject);
         xmlTreeRepository.save(newTree);
 
         File xmlFile = new File(filePath);
 
         try {
-            Document doc = Jsoup.parse(xmlFile, null, "", Parser.xmlParser());
+            org.jsoup.nodes.Document doc = Jsoup.parse(xmlFile, null, "", Parser.xmlParser());
             org.jsoup.nodes.Element rootElement = doc.selectFirst("Element");
             parseElement(rootElement, null, newTree, cadProject);
         } catch (IOException e) {
@@ -159,7 +163,7 @@ public class EngineeringDataService {
         element.setName(paramMap.getOrDefault("Наименование", null));
         element.setFullDesignation(paramMap.getOrDefault("Обозначение полное", null));
         element.setSection(paramMap.getOrDefault("Раздел", null));
-        element.setMaterial(paramMap.getOrDefault("Марка материала", null));
+        element.setMaterial((paramMap.getOrDefault("Материал", null)+" "+paramMap.getOrDefault("Материал2", null)+" "+paramMap.getOrDefault("Материал3", null)).trim());
         element.setUnit(paramMap.getOrDefault("Единица измерения", null));
 
         // Обрабатываем числовые значения
@@ -182,28 +186,62 @@ public class EngineeringDataService {
         element.setFormat(paramMap.getOrDefault("Формат", null));
     }
 
-    public void linkElementsToItems() {
-        List<EngineeringElement> elements = elementRepository.findAll();
-        for (EngineeringElement element : elements) {
-            // Ищем подходящий Document
-            Optional<ru.aziattsev.pdm_system.entity.Document> matchingDocument = documentRepository
-                    .findByDesignationAndName(element.getDesignation(), element.getName());
+    public void linkElementsToItems(Long projectId) {
+        // 1. Получаем пары элемент-документ по проекту
+        List<ElementDocumentPair> pairs = elementRepository.findElementsWithDocumentsByProjectId(projectId);
 
-            if (matchingDocument.isPresent()) {
-                // Ищем или создаем Item для этого Document
-                Item item = itemRepository.findByDocument(matchingDocument.get())
-                        .orElseGet(() -> {
-                            Item newItem = new Item();
-                            newItem.setDocument(matchingDocument.get());
-                            newItem.setQuantity(element.getQuantity() != null ?
-                                    element.getQuantity() : 0d);
-                            return itemRepository.save(newItem);
-                        });
+        if (pairs.isEmpty()) return;
 
-                // Привязываем Item к элементу
-                element.setItem(item);
-                elementRepository.save(element);
-            }
+        // 2. Извлекаем все documentId
+        Set<Long> docIds = pairs.stream()
+                .map(p -> p.document().getId())
+                .collect(Collectors.toSet());
+
+        // 3. Загружаем все уже существующие Item по этим документам одним запросом
+        Map<Long, Item> itemMap = itemRepository.findByDocumentIdIn(docIds).stream()
+                .collect(Collectors.toMap(
+                        (Item i) -> i.getDocument().getId(),
+                        (Item i) -> i
+                ));
+
+        // Обнуляем quantity у всех существующих Items перед подсчетом суммы
+        for (Item item : itemMap.values()) {
+            item.setQuantity(0d);
         }
+
+        // 4. Обрабатываем каждую пару, создаем новые Item если надо, и суммируем quantity
+        List<Item> newItemsToSave = new ArrayList<>();
+        List<EngineeringElement> updatedElements = new ArrayList<>();
+
+        for (ElementDocumentPair pair : pairs) {
+            EngineeringElement element = pair.element();
+            Document doc = pair.document();
+
+            Item item = itemMap.get(doc.getId());
+
+            if (item == null) {
+                item = new Item();
+                item.setDocument(doc);
+                item.setQuantity(0d); // стартуем с 0, потом прибавим
+                newItemsToSave.add(item);
+                // добавим в мапу, чтобы не создавать дубликаты
+                itemMap.put(doc.getId(), item);
+            }
+
+            // Прибавляем количество из EngineeringElement
+            item.setQuantity(item.getQuantity() + (element.getQuantity() != null ? element.getQuantity() : 0d));
+
+            element.setItem(item);
+            updatedElements.add(element);
+        }
+
+        // 5. Сохраняем новые Items одним saveAll
+        if (!newItemsToSave.isEmpty()) {
+            itemRepository.saveAll(newItemsToSave);
+        }
+
+        // 6. Сохраняем обновленные элементы одним saveAll
+        elementRepository.saveAll(updatedElements);
     }
+
 }
