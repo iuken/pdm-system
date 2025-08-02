@@ -55,6 +55,8 @@ public class Item {
     @ManyToOne
     private CadProject project;
 
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL)
+    private List<ItemProcurement> procurements;
     public Item() {
     }
 
