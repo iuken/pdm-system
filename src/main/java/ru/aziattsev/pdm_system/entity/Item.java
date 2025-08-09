@@ -16,18 +16,15 @@ public class Item {
     @ManyToOne
     private Document document;
 
-    @JoinColumn
-    @OneToOne
-    private PdmUser responsible;
 
     @Column
     @OneToMany
     private List<PdmUser> participants;
 
 //    private String participants;
+
     @Column
     private Double quantity;
-
     @Column
     private String material;
 
@@ -47,24 +44,38 @@ public class Item {
     private Priority priority;
 
 //    private String priority;
+
     @Column
     private DocumentStatus status;
-
 //    private String status;
+
     @JoinColumn
     @ManyToOne
     private CadProject project;
-
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL)
     private List<ItemProcurement> procurements;
-    public Item() {
-    }
 
+    @JoinColumn
+    @ManyToOne
+    private PdmUser responsible;
+
+    @JoinColumn
+    @ManyToOne
+    private PdmUser lastModify;
+
+    @JoinColumn
+    @ManyToOne
+    private PdmUser developer;
+
+    public Item() {
+        this.setStatus(DocumentStatus.UNDEFINED);
+    }
     public Item(Document document) {
         this.project = document.getProject();
         this.document = document;
         this.price = 0d;
         this.quantity = 0d;
+        this.setStatus(DocumentStatus.UNDEFINED);
     }
 
     public Long getId() {
@@ -83,13 +94,7 @@ public class Item {
         this.document = document;
     }
 
-    public PdmUser getResponsible() {
-        return responsible;
-    }
 
-    public void setResponsible(PdmUser responsible) {
-        this.responsible = responsible;
-    }
 
     public List<PdmUser> getParticipants() {
         return participants;
@@ -169,5 +174,37 @@ public class Item {
 
     public void setProject(CadProject project) {
         this.project = project;
+    }
+
+
+
+    public List<ItemProcurement> getProcurements() {
+        return procurements;
+    }
+
+    public void setProcurements(List<ItemProcurement> procurements) {
+        this.procurements = procurements;
+    }
+    public PdmUser getResponsible() {
+        return responsible;
+    }
+
+    public void setResponsible(PdmUser responsible) {
+        this.responsible = responsible;
+    }
+    public PdmUser getLastModify() {
+        return lastModify;
+    }
+
+    public void setLastModify(PdmUser lastModify) {
+        this.lastModify = lastModify;
+    }
+
+    public PdmUser getDeveloper() {
+        return developer;
+    }
+
+    public void setDeveloper(PdmUser developer) {
+        this.developer = developer;
     }
 }

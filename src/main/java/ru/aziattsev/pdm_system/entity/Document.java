@@ -24,35 +24,20 @@ public class Document {
     @Column
     private String name;
 
-    //    @JoinColumn
-//    @OneToOne
-//    private DocUser modelMaker;
     @Column
     private String modelMaker;
 
-    //    @JoinColumn
-//    @OneToOne
-//    private DocUser drawing;
     @Column
     private String drawing;
     @Column
     private String checking;
 
-    //    @JoinColumn
-//    @OneToOne
-//    private DocUser standardControl;
     @Column
     private String standardControl;
 
-    //    @JoinColumn
-//    @OneToOne
-//    private DocUser technicalControl;
     @Column
     private String technicalControl;
 
-    //    @JoinColumn
-//    @OneToOne
-//    private DocUser approved;
     @Column
     private String approved;
 
@@ -75,6 +60,7 @@ public class Document {
     private String ySize;
     @Column
     private String zSize;
+
 
     @JoinColumn
     @ManyToOne

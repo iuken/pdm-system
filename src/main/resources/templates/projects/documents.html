@@ -104,6 +104,46 @@
             color: #212529;
             font-weight: 500;
         }
+
+        /* Переработанные стили статусов */
+        .status-cell {
+            position: relative;
+            padding-left: 2rem !important;
+        }
+
+        /* Базовый стиль для иконок */
+        .status-icon {
+            position: absolute;
+            left: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.1em;
+        }
+
+        /* Цвета для конкретных статусов */
+        .status-UNDEFINED .status-icon {
+            color: #6c757d; /* серый */
+        }
+
+        .status-MARKED_AS_READY .status-icon {
+            color: #17a2b8; /* бирюзовый */
+        }
+
+        /* Статусы проверки (красные) */
+        .status-CHECKER_MARKED_AS_NOT_READY .status-icon,
+        .status-STANDARD_CONTROL_MARKED_AS_NOT_READY .status-icon,
+        .status-TECHNICAL_CONTROL_MARKED_AS_NOT_READY .status-icon,
+        .status-APPROVED_MARKED_AS_NOT_READY .status-icon {
+            color: #dc3545; /* красный */
+        }
+
+        /* Статусы проверки (зеленые) */
+        .status-CHECKER_MARKED_AS_READY .status-icon,
+        .status-STANDARD_CONTROL_MARKED_AS_READY .status-icon,
+        .status-TECHNICAL_CONTROL_MARKED_AS_READY .status-icon,
+        .status-APPROVED_MARKED_AS_READY .status-icon {
+            color: #28a745; /* зеленый */
+        }
     </style>
 </head>
 <body>
@@ -119,8 +159,6 @@
 </div>
 
 <div class="container-fluid">
-
-
     <!-- Карточка с таблицей -->
     <div class="card">
         <!-- Шапка карточки -->
@@ -141,26 +179,16 @@
                     <th class="resizable-th">ID
                         <div class="resize-handle"></div>
                     </th>
-                    <th class="resizable-th">Производитель
-                        <div class="resize-handle"></div>
-                    </th>
-                    <th class="resizable-th">Количество
-                        <div class="resize-handle"></div>
-                    </th>
-                    <th class="resizable-th">Цена
+                    <th class="resizable-th">Файл
                         <div class="resize-handle"></div>
                     </th>
                     <th class="resizable-th">Статус
                         <div class="resize-handle"></div>
                     </th>
-                    <!-- Колонки для документа -->
-                    <th class="resizable-th">Файл
+                    <th class="resizable-th">Последний подписавший
                         <div class="resize-handle"></div>
                     </th>
-                    <th class="resizable-th">Название
-                        <div class="resize-handle"></div>
-                    </th>
-                    <th class="resizable-th">Материал
+                    <th class="resizable-th">Ответственный
                         <div class="resize-handle"></div>
                     </th>
                 </tr>
@@ -168,26 +196,17 @@
                 <tbody>
                 <tr th:each="item : ${items}">
                     <td th:text="${item.id}"></td>
-                    <td class="editable" contenteditable="true"
-                        data-field="manufacturer"
-                        th:data-id="${item.id}"
-                        th:text="${item.manufacturer}"></td>
-                    <td class="editable" contenteditable="true"
-                        data-field="quantity"
-                        th:data-id="${item.id}"
-                        th:text="${item.quantity}"></td>
-                    <td class="editable" contenteditable="true"
-                        data-field="price"
-                        th:data-id="${item.id}"
-                        th:text="${#numbers.formatDecimal(item.price, 1, 2)}"></td>
-                    <td class="editable" contenteditable="true"
+                    <td th:text="${item.document?.clientFilePath}"></td>
+                    <td class="editable status-cell"
+                        contenteditable="true"
                         data-field="status"
                         th:data-id="${item.id}"
-                        th:text="${item.status}"></td>
-                    <!-- Поля документа (не редактируемые) -->
-                    <td th:text="${item.document?.clientFilePath}"></td>
-                    <td th:text="${item.document?.name}"></td>
-                    <td th:text="${item.document?.material2}"></td>
+                        th:data-status="${item.status.name()}">
+                        <i class="bi status-icon"></i>
+                        <span th:text="${item.status.getDisplayName()}"></span>
+                    </td>
+                    <td th:text="${item.lastModify != null} ? ${item.lastModify.displayName} : 'Не указан'"></td>
+                    <td th:text="${item.responsible != null} ? ${item.responsible.displayName} : 'Не указан'"></td>
                 </tr>
                 </tbody>
             </table>
@@ -200,6 +219,29 @@
 
 <script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function () {
+        const iconMap = {
+            'UNDEFINED': 'bi-hourglass',
+            'MARKED_AS_READY': 'bi-check-circle',
+            'CHECKER_MARKED_AS_NOT_READY': 'bi-x-circle',
+            'CHECKER_MARKED_AS_READY': 'bi-check-circle',
+            'STANDARD_CONTROL_MARKED_AS_NOT_READY': 'bi-x-circle',
+            'STANDARD_CONTROL_MARKED_AS_READY': 'bi-check-circle',
+            'TECHNICAL_CONTROL_MARKED_AS_NOT_READY': 'bi-x-circle',
+            'TECHNICAL_CONTROL_MARKED_AS_READY': 'bi-check-circle',
+            'APPROVED_MARKED_AS_NOT_READY': 'bi-x-circle',
+            'APPROVED_MARKED_AS_READY': 'bi-check-circle'
+        };
+
+        document.querySelectorAll('.status-cell').forEach(cell => {
+            const status = cell.getAttribute('data-status');
+            const icon = cell.querySelector('.status-icon');
+            if (icon && iconMap[status]) {
+                icon.className = `bi status-icon ${iconMap[status]}`;
+                cell.classList.add(`status-${status}`);
+            }
+        });
+
+        // Остальной JavaScript код...
         const table = document.getElementById('items-table');
         const saveBtn = document.getElementById('save-btn');
         const modifiedCells = new Set();
@@ -229,6 +271,7 @@
                 }
             });
         });
+
         // Обработка кнопки сохранения
         saveBtn.addEventListener('click', function () {
             if (modifiedCells.size === 0) {

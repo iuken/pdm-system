@@ -4,6 +4,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import ru.aziattsev.pdm_system.entity.CadProject;
+import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.CadProjectService;
 import ru.aziattsev.pdm_system.services.ItemService;
 
@@ -12,10 +13,12 @@ import ru.aziattsev.pdm_system.services.ItemService;
 public class ProjectController {
     private final CadProjectService projectService;
     private final ItemService itemService;
+    private final PdmUserRepository userRepository;
 
-    public ProjectController(CadProjectService projectService, ItemService itemService) {
+    public ProjectController(CadProjectService projectService, ItemService itemService, PdmUserRepository userRepository) {
         this.projectService = projectService;
         this.itemService = itemService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -52,12 +55,14 @@ public class ProjectController {
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("project", new CadProject());
+        model.addAttribute("users", userRepository.findAllByActive(true));
         return "projects/form";
     }
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable Long id, Model model) {
         projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
+        model.addAttribute("users", userRepository.findAllByActive(true));
         return "projects/form";
     }
 

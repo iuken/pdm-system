@@ -37,6 +37,55 @@
       <textarea class="form-control" id="info" th:field="*{info}" rows="3"></textarea>
     </div>
 
+    <!-- Выбор ответственных -->
+    <div class="mb-3">
+      <label for="checking" class="form-label">Checking</label>
+      <select class="form-select" id="checking" th:field="*{checking}">
+        <option value="">-- Select User --</option>
+        <option th:each="user : ${users}"
+                th:value="${user.id}"
+                th:text="${user.displayName}"
+                th:selected="${project.checking != null and project.checking.id == user.id}">
+        </option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="standardControl" class="form-label">Standard Control</label>
+      <select class="form-select" id="standardControl" th:field="*{standardControl}">
+        <option value="">-- Select User --</option>
+        <option th:each="user : ${users}"
+                th:value="${user.id}"
+                th:text="${user.displayName}"
+                th:selected="${project.standardControl != null and project.standardControl.id == user.id}">
+        </option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="technicalControl" class="form-label">Technical Control</label>
+      <select class="form-select" id="technicalControl" th:field="*{technicalControl}">
+        <option value="">-- Select User --</option>
+        <option th:each="user : ${users}"
+                th:value="${user.id}"
+                th:text="${user.displayName}"
+                th:selected="${project.technicalControl != null and project.technicalControl.id == user.id}">
+        </option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="approved" class="form-label">Approved</label>
+      <select class="form-select" id="approved" th:field="*{approved}">
+        <option value="">-- Select User --</option>
+        <option th:each="user : ${users}"
+                th:value="${user.id}"
+                th:text="${user.displayName}"
+                th:selected="${project.approved != null and project.approved.id == user.id}">
+        </option>
+      </select>
+    </div>
+
     <button type="submit" class="btn btn-primary">Save</button>
     <a th:href="@{/projects}" class="btn btn-secondary">Cancel</a>
   </form>

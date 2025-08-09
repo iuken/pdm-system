@@ -2,6 +2,8 @@ package ru.aziattsev.pdm_system.entity;
 
 import jakarta.persistence.*;
 
+import java.util.List;
+
 @Entity
 @Table
 public class CadProject {
@@ -15,6 +17,26 @@ public class CadProject {
     private String directory;
     private String mainAssemblyPath;
     private String structurePath;
+
+//    @JoinColumn
+//    @ManyToOne
+//    private List<PdmUser> drawing;
+
+    @JoinColumn
+    @OneToOne
+    private PdmUser checking;
+
+    @JoinColumn
+    @OneToOne
+    private PdmUser standardControl;
+
+    @JoinColumn
+    @OneToOne
+    private PdmUser technicalControl;
+
+    @JoinColumn
+    @OneToOne
+    private PdmUser approved;
 
     public void setId(Long id) {
         this.id = id;
@@ -66,4 +88,36 @@ public class CadProject {
         this.structurePath = serverStructurePath;
     }
 
+
+    public PdmUser getChecking() {
+        return checking;
+    }
+
+    public void setChecking(PdmUser checking) {
+        this.checking = checking;
+    }
+
+    public PdmUser getStandardControl() {
+        return standardControl;
+    }
+
+    public void setStandardControl(PdmUser standardControl) {
+        this.standardControl = standardControl;
+    }
+
+    public PdmUser getTechnicalControl() {
+        return technicalControl;
+    }
+
+    public void setTechnicalControl(PdmUser technicalControl) {
+        this.technicalControl = technicalControl;
+    }
+
+    public PdmUser getApproved() {
+        return approved;
+    }
+
+    public void setApproved(PdmUser approved) {
+        this.approved = approved;
+    }
 }

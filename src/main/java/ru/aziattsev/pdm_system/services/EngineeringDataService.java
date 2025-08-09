@@ -221,6 +221,7 @@ public class EngineeringDataService {
 
             if (item == null) {
                 item = new Item();
+                item.setStatus(DocumentStatus.UNDEFINED);
                 item.setDocument(doc);
                 item.setQuantity(0d); // стартуем с 0, потом прибавим
                 newItemsToSave.add(item);

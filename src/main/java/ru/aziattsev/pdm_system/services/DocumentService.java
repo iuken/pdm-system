@@ -7,6 +7,7 @@ import ru.aziattsev.pdm_system.entity.*;
 import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.DocumentRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
+import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,11 +26,13 @@ public class DocumentService {
 
     private final ItemRepository itemRepository;
     private final CadProjectRepository cadProjectRepository;
+    private final PdmUserRepository pdmUserRepository;
 
-    public DocumentService(DocumentRepository documentRepository, ItemRepository itemRepository, CadProjectRepository cadProjectRepository) {
+    public DocumentService(DocumentRepository documentRepository, ItemRepository itemRepository, CadProjectRepository cadProjectRepository, PdmUserRepository pdmUserRepository) {
         this.documentRepository = documentRepository;
         this.itemRepository = itemRepository;
         this.cadProjectRepository = cadProjectRepository;
+        this.pdmUserRepository = pdmUserRepository;
     }
 
     public void UploadFromPath(String projectPath, Long projectId) {
@@ -116,12 +119,108 @@ public class DocumentService {
         if (itemOptional.isEmpty()) {
             //создаем объект
             item = new Item(document);
+            item.setStatus(DocumentStatus.UNDEFINED);
             //Сохраняем в бд
         }
         else {
             item = itemOptional.get();
         }
+
+        //запоминаем предыдущий статус
+        DocumentStatus previousStatus = item.getStatus();
+
+        //устанавливаем новый статус
         item.setStatus(documentStatus);
+
+        //устанавливаем последнего изменившего
+        Optional<PdmUser> lastModifyOptional = pdmUserRepository.findByUsername(documentRequest.user());
+        PdmUser lastModify = lastModifyOptional.get();
+        item.setLastModify(lastModify);
+
+        //устанавливаем разработчика
+        if (documentStatus == DocumentStatus.MARKED_AS_READY){
+            item.setDeveloper(lastModify);
+        }
+
+
+        item.setResponsible(getResponsible(item, documentStatus, previousStatus));
+
         itemRepository.save(item);
+    }
+
+    /*
+    назначение ответственного по статусам и послденему изменившему
+     порядок согласования:
+подпись разработчика,
+ проверяющего,
+ техконтроля,
+ нормоконтроля,
+ удверждение
+
+ если подписал разработчик, нужно смотреть кто последний подписывал и ему вернуть документ
+ разработчик смоделировал, начертил подписывает MARKED_AS_NOT_READY, предыдушего статуса не было
+ документ переходит проверяющему и подписывает CHECKER_MARKED_AS_NOT_READY, смотрим кто поставил статус готовности и
+ возвращаем ему с новым статусом
+ разработчик вновь корректирует ставит статус MARKED_AS_NOT_READY предыдущий статус был от проверяющего, ему и возвращаем
+ проверяющий подписывает со статусом CHECKER_MARKED_AS_READY документ переходит технологу
+ техконтроль проверяет подписывает TECHNICAL_CONTROL_MARKED_AS_NOT_READY и документ должен вернуться РАЗРАБОТЧИКУ(ЕГО НУЖНО ПОМНИТЬ)
+ разработчик подписывает MARKED_AS_NOT_READY и документ возвращает согласно предыдущему статусу - технологу
+
+ если техконтроля в проекте нет, документ должен сразу уйти нормоконтролю аналогично
+
+ item должен хранить пользователя разработчика, чтоб вернуть ему на любом этапе подписания
+ проект может иметь множетсво разработчиков и единственных проверящих, нормоконтролера и утверждающего, их не храним в item
+
+     */
+
+    private PdmUser getResponsible(Item item, DocumentStatus documentStatus, DocumentStatus previousStatus){
+        CadProject cadProject = item.getProject();
+        switch (documentStatus) {
+            case MARKED_AS_READY: {
+                if  (previousStatus != null){
+                    switch (previousStatus) {
+                        case CHECKER_MARKED_AS_NOT_READY: {
+                            return cadProject.getChecking();
+                        }
+                        case TECHNICAL_CONTROL_MARKED_AS_NOT_READY: {
+                            return cadProject.getTechnicalControl();
+                        }
+                        case STANDARD_CONTROL_MARKED_AS_NOT_READY: {
+                            return cadProject.getStandardControl();
+                        }
+                        case APPROVED_MARKED_AS_NOT_READY: {
+                            return cadProject.getApproved();
+                        }
+                    }
+                }
+                else return cadProject.getChecking();
+
+            }
+            case CHECKER_MARKED_AS_NOT_READY:{
+                return item.getDeveloper();
+            }
+            case CHECKER_MARKED_AS_READY:{
+                return cadProject.getTechnicalControl()==null?cadProject.getStandardControl():cadProject.getTechnicalControl();
+            }
+            case STANDARD_CONTROL_MARKED_AS_NOT_READY:{
+                return item.getDeveloper();
+            }
+            case STANDARD_CONTROL_MARKED_AS_READY:{
+                return cadProject.getApproved();
+            }
+            case TECHNICAL_CONTROL_MARKED_AS_NOT_READY:{
+                return item.getDeveloper();
+            }
+            case TECHNICAL_CONTROL_MARKED_AS_READY:{
+                return cadProject.getStandardControl();
+            }
+            case APPROVED_MARKED_AS_NOT_READY:{
+                return item.getDeveloper();
+            }
+            case APPROVED_MARKED_AS_READY:{
+                return null;
+            }
+        }
+        return null;
     }
 }
