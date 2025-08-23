@@ -2,6 +2,7 @@ package ru.aziattsev.pdm_system.controllers;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,8 @@ public class AppController {
     @Autowired
     PdmUserRepository pdmUserRepository;
 
+    @Value("${app.version}")
+    private String appVersion;
     @GetMapping("/")
     public String redirectToHome() {
         return "redirect:/home";
@@ -67,7 +70,7 @@ public class AppController {
                     new Activity("Изменен документ 'Чертеж-001'", LocalDateTime.now().minusDays(1)),
                     new Activity("Утверждена спецификация", LocalDateTime.now().minusDays(2))
             ));
-
+            model.addAttribute("version", appVersion);
             return "home"; // имя шаблона Thymeleaf (home.html)
         }
 
