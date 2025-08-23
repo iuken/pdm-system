@@ -4,13 +4,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import ru.aziattsev.pdm_system.entity.CadProject;
+import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.CadProjectService;
 import ru.aziattsev.pdm_system.services.ItemService;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @Controller
 @RequestMapping("/projects")
@@ -45,9 +44,26 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}/documents")
-    public String viewProjectDocuments(@PathVariable Long id, Model model) {
-        model.addAttribute("items", itemService.findAllByProjectIdWithExistedDocument(id));
-        projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
+    public String viewProjectDocuments(
+            @PathVariable Long id,
+            @RequestParam(required = false) String filename,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String lastModify,
+            @RequestParam(required = false) String responsible,
+            Model model) {
+
+        Map<String, String> searchParams = new HashMap<>();
+        searchParams.put("filename", filename != null ? filename : "");
+        searchParams.put("status", status != null ? status : "");
+        searchParams.put("lastModify", lastModify != null ? lastModify : "");
+        searchParams.put("responsible", responsible != null ? responsible : "");
+
+        List<Item> items = itemService.findFilteredByProjectId(id, filename, status, lastModify, responsible);
+
+        model.addAttribute("project", projectService.findById(id).orElse(null));
+        model.addAttribute("items", items);
+        model.addAttribute("searchParams", searchParams);
+
         return "projects/documents";
     }
 
@@ -60,8 +76,14 @@ public class ProjectController {
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
+        CadProject project = new CadProject();
         model.addAttribute("project", new CadProject());
         model.addAttribute("users", userRepository.findAllByActive(true));
+        model.addAttribute("ignorePatternsText",
+                project.getIgnorePatterns() != null
+                        ? String.join("\n", project.getIgnorePatterns())
+                        : ""
+        );
         return "projects/form";
     }
 
@@ -69,6 +91,12 @@ public class ProjectController {
     public String showEditForm(@PathVariable Long id, Model model) {
         projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
         model.addAttribute("users", userRepository.findAllByActive(true));
+        CadProject project = projectService.findById(id).orElse(new CadProject());
+        model.addAttribute("ignorePatternsText",
+                project.getIgnorePatterns() != null
+                        ? String.join("\n", project.getIgnorePatterns())
+                        : ""
+        );
         return "projects/form";
     }
 

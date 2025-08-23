@@ -89,7 +89,7 @@
         <div class="mb-3">
             <label for="ignorePatterns" class="form-label">Ignore Patterns (Regex, по одному на строку)</label>
             <textarea class="form-control" id="ignorePatterns" name="ignorePatternsText" rows="5"
-                      th:text="${#strings.arrayJoin(project.ignorePatterns, '\n')}"></textarea>
+                      th:text="${ignorePatternsText}"></textarea>
             <div class="form-text">
                 Каждое выражение укажите в новой строке. Например:<br>
                 <code>.*old.*</code><br>

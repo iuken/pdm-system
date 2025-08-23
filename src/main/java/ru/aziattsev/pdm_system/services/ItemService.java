@@ -104,4 +104,37 @@ public class ItemService {
         // Сохраняем все обновленные Items
         itemRepository.saveAll(items);
     }
+
+    public List<Item> findFilteredByProjectId(Long projectId,
+                                              String filename,
+                                              String status,
+                                              String lastModify,
+                                              String responsible) {
+        // Сначала получаем все документы проекта
+        List<Item> items = findAllByProjectIdWithExistedDocument(projectId);
+
+        // Фильтруем по введенным параметрам с игнорированием регистра
+        return items.stream()
+                .filter(item -> filename == null || filename.isBlank()
+                        || (item.getDocument() != null
+                        && item.getDocument().getClientFilePath() != null
+                        && item.getDocument().getClientFilePath().toLowerCase()
+                        .contains(filename.toLowerCase())))
+                .filter(item -> status == null || status.isBlank()
+                        || (item.getStatus() != null
+                        && item.getStatus().getDisplayName() != null
+                        && item.getStatus().getDisplayName().toLowerCase()
+                        .contains(status.toLowerCase())))
+                .filter(item -> lastModify == null || lastModify.isBlank()
+                        || (item.getLastModify() != null
+                        && item.getLastModify().getDisplayName() != null
+                        && item.getLastModify().getDisplayName().toLowerCase()
+                        .contains(lastModify.toLowerCase())))
+                .filter(item -> responsible == null || responsible.isBlank()
+                        || (item.getResponsible() != null
+                        && item.getResponsible().getDisplayName() != null
+                        && item.getResponsible().getDisplayName().toLowerCase()
+                        .contains(responsible.toLowerCase())))
+                .toList();
+    }
 }

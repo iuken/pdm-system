@@ -130,6 +130,30 @@
     </div>
 </div>
 
+<div class="container mb-3 mt-3">
+    <form th:action="@{/projects/{id}/documents(id=${project.id})}" method="get" class="row g-2 mb-3">
+        <div class="col-5">
+            <input type="text" name="filename" class="form-control" placeholder="Файл"
+                   th:value="${searchParams.filename}">
+        </div>
+        <div class="col-2">
+            <input type="text" name="status" class="form-control" placeholder="Статус"
+                   th:value="${searchParams.status}">
+        </div>
+        <div class="col-2">
+            <input type="text" name="lastModify" class="form-control" placeholder="Последний подписавший"
+                   th:value="${searchParams.lastModify}">
+        </div>
+        <div class="col-2">
+            <input type="text" name="responsible" class="form-control" placeholder="Ответственный"
+                   th:value="${searchParams.responsible}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Поиск</button>
+        </div>
+    </form>
+</div>
+
 <div class="container-fluid">
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
