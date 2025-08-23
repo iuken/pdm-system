@@ -8,6 +8,10 @@ import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.CadProjectService;
 import ru.aziattsev.pdm_system.services.ItemService;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 @Controller
 @RequestMapping("/projects")
 public class ProjectController {
@@ -42,16 +46,18 @@ public class ProjectController {
 
     @GetMapping("/{id}/documents")
     public String viewProjectDocuments(@PathVariable Long id, Model model) {
-        model.addAttribute("items", itemService.findAllByProjectId(id));
+        model.addAttribute("items", itemService.findAllByProjectIdWithExistedDocument(id));
         projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
         return "projects/documents";
     }
+
     @GetMapping("/{id}/structure")
     public String viewStructureHome(@PathVariable Long id, Model model) {
         model.addAttribute("projectId", id);
         model.addAttribute("structure", itemService.findAllByProjectId(id));
         return "structure/home";
     }
+
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("project", new CadProject());
@@ -67,7 +73,20 @@ public class ProjectController {
     }
 
     @PostMapping("/save")
-    public String saveProject(@ModelAttribute CadProject project) {
+    public String saveProject(@ModelAttribute CadProject project,
+                              @RequestParam(name = "ignorePatternsText", required = false) String ignorePatternsText) {
+
+        if (ignorePatternsText != null && !ignorePatternsText.isBlank()) {
+            // Разбиваем и по \R (любые переводы строки), и дополнительно на всякий случай по \n
+            List<String> patterns = Arrays.stream(ignorePatternsText.split("\\R|\\n"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            project.setIgnorePatterns(patterns);
+        } else {
+            project.setIgnorePatterns(new ArrayList<>());
+        }
+
         projectService.save(project);
         return "redirect:/projects";
     }

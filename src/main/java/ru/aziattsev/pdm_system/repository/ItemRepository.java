@@ -15,7 +15,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     Optional<Item> findFirstByDocument(Document document);
 
     List<Item> findAllByProject(CadProject cadProject);
+
     Optional<Item> findByDocument(Document document);
 
     List<Item> findByDocumentIdIn(Set<Long> documentIds);
+
+    List<Item> findByProjectAndDocumentIsExistTrue(CadProject cadProject);
 }

@@ -61,6 +61,8 @@ public class Document {
     @Column
     private String zSize;
 
+    @Column
+    private boolean isExist;
 
     @JoinColumn
     @ManyToOne
@@ -76,8 +78,20 @@ public class Document {
         this.filePath = filePath;
     }
 
-    public Document() {
+    public Document(String filePath, Date creationTime, Date lastModifiedTime, boolean isExist) {
+        this.filePath = filePath;
+        this.creationTime = creationTime;
+        this.lastModifiedTime = lastModifiedTime;
+        this.isExist = isExist;
+    }
 
+    public Document(String filePath, boolean isExist) {
+        this.filePath = filePath;
+        this.isExist = isExist;
+    }
+
+    public Document() {
+        this.isExist = false;
     }
 
     public Long getId() {
@@ -91,6 +105,7 @@ public class Document {
     public String getFilePath() {
         return filePath;
     }
+
     public String getClientFilePath() {
         return PathConverter.toClientPath(filePath);
     }
@@ -242,4 +257,6 @@ public class Document {
     public void setProject(CadProject project) {
         this.project = project;
     }
+
+
 }

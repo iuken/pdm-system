@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Документы</title>
-    <!-- Подключаем Bootstrap CSS и иконки -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -45,6 +44,7 @@
             border: 1px solid #dee2e6;
             padding: 8px;
             min-width: 100px;
+            background-color: white;
         }
 
         #items-table th {
@@ -53,13 +53,27 @@
             font-weight: 600;
             position: sticky;
             top: 0;
+            z-index: 10;
         }
 
-        #items-table th:hover {
-            background-color: #e2e8f7;
+        .resizable-th {
+            position: relative;
         }
 
-        /* Стили для статусов */
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            background: #ddd;
+            cursor: col-resize;
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            z-index: 20;
+        }
+
         .status-cell {
             position: relative;
             padding-left: 2rem !important;
@@ -71,9 +85,9 @@
             top: 50%;
             transform: translateY(-50%);
             font-size: 1.1em;
+            z-index: 1;
         }
 
-        /* Цвета для конкретных статусов */
         .status-UNDEFINED .status-icon {
             color: #6c757d;
         }
@@ -82,7 +96,6 @@
             color: #17a2b8;
         }
 
-        /* Статусы проверки (красные) */
         .status-CHECKER_MARKED_AS_NOT_READY .status-icon,
         .status-STANDARD_CONTROL_MARKED_AS_NOT_READY .status-icon,
         .status-TECHNICAL_CONTROL_MARKED_AS_NOT_READY .status-icon,
@@ -90,7 +103,6 @@
             color: #dc3545;
         }
 
-        /* Статусы проверки (зеленые) */
         .status-CHECKER_MARKED_AS_READY .status-icon,
         .status-STANDARD_CONTROL_MARKED_AS_READY .status-icon,
         .status-TECHNICAL_CONTROL_MARKED_AS_READY .status-icon,
@@ -119,28 +131,33 @@
 </div>
 
 <div class="container-fluid">
-    <!-- Карточка с таблицей -->
     <div class="card">
-        <!-- Шапка карточки -->
         <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="bi bi-table"></i> Документы
-            </div>
+            <div><i class="bi bi-table"></i> Документы</div>
             <div class="badge badge-count">
                 <i class="bi bi-list-check"></i> Всего: <span th:text="${items.size()}">0</span>
             </div>
         </div>
 
-        <!-- Контейнер таблицы -->
         <div class="table-container">
             <table id="items-table" class="table table-hover">
                 <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Файл</th>
-                    <th>Статус</th>
-                    <th>Последний подписавший</th>
-                    <th>Ответственный</th>
+                    <th class="resizable-th">ID
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Файл
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Статус
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Последний подписавший
+                        <div class="resize-handle"></div>
+                    </th>
+                    <th class="resizable-th">Ответственный
+                        <div class="resize-handle"></div>
+                    </th>
                 </tr>
                 </thead>
                 <tbody>
@@ -160,11 +177,11 @@
     </div>
 </div>
 
-<!-- Подключаем Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function () {
+        // Иконки статусов
         const iconMap = {
             'UNDEFINED': 'bi-hourglass',
             'MARKED_AS_READY': 'bi-check-circle',
@@ -178,7 +195,6 @@
             'APPROVED_MARKED_AS_READY': 'bi-check-circle'
         };
 
-        // Установка иконок для статусов
         document.querySelectorAll('.status-cell').forEach(cell => {
             const status = cell.getAttribute('data-status');
             const icon = cell.querySelector('.status-icon');
@@ -186,6 +202,38 @@
                 icon.className = `bi status-icon ${iconMap[status]}`;
                 cell.classList.add(`status-${status}`);
             }
+        });
+
+        // Изменение ширины колонок
+        document.querySelectorAll('.resizable-th').forEach(th => {
+            const handle = th.querySelector('.resize-handle');
+            handle.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = th.offsetWidth;
+                const table = th.closest('table');
+
+                function doDrag(e) {
+                    const newWidth = startWidth + e.clientX - startX;
+                    th.style.width = newWidth + 'px';
+
+                    // Обновляем ширину всех ячеек в колонке
+                    const colIndex = Array.from(th.parentNode.children).indexOf(th);
+                    const rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const cell = row.children[colIndex];
+                        if (cell) cell.style.width = newWidth + 'px';
+                    });
+                }
+
+                function stopDrag() {
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+            });
         });
     });
 </script>

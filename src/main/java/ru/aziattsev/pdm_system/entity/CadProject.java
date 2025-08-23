@@ -2,6 +2,7 @@ package ru.aziattsev.pdm_system.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -23,27 +24,32 @@ public class CadProject {
 //    private List<PdmUser> drawing;
 
     @JoinColumn
-    @OneToOne
+    @ManyToOne
     private PdmUser checking;
 
     @JoinColumn
-    @OneToOne
+    @ManyToOne
     private PdmUser standardControl;
 
     @JoinColumn
-    @OneToOne
+    @ManyToOne
     private PdmUser technicalControl;
 
     @JoinColumn
-    @OneToOne
+    @ManyToOne
     private PdmUser approved;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "cad_project_ignore_patterns", joinColumns = @JoinColumn(name = "cad_project_id"))
+    @Column(name = "pattern")
+    private List<String> ignorePatterns = new ArrayList<>();
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -120,4 +126,13 @@ public class CadProject {
     public void setApproved(PdmUser approved) {
         this.approved = approved;
     }
+
+    public List<String> getIgnorePatterns() {
+        return ignorePatterns;
+    }
+
+    public void setIgnorePatterns(List<String> ignorePatterns) {
+        this.ignorePatterns = ignorePatterns;
+    }
+
 }
