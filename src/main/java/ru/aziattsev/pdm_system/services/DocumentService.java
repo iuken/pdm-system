@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -37,6 +38,12 @@ public class DocumentService {
 
     public void UploadFromPath(String projectPath, Long projectId) {
         CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
+
+
+        List<Document> existingDocuments = documentRepository.findByProject(cadProject);
+        existingDocuments.forEach(doc -> doc.setExist(false));
+        documentRepository.saveAll(existingDocuments);
+
         File dir = new File(projectPath);
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
             stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb"))
@@ -44,14 +51,13 @@ public class DocumentService {
                         try {
                             String normalizedPath = file.toAbsolutePath().normalize().toString();
                             String serverPath = PathConverter.toServerPath(normalizedPath);
-                            System.out.println(normalizedPath);
                             Date creationTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis());
                             Date lastModifiedTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
-                            return new Document(serverPath, creationTime, lastModifiedTime);
+                            return new Document(serverPath, creationTime, lastModifiedTime, true);
                         } catch (IOException e) {
                             String normalizedPath = file.toAbsolutePath().normalize().toString();
                             String serverPath = PathConverter.toServerPath(normalizedPath);
-                            return new Document(serverPath);
+                            return new Document(serverPath, true);
                         }
                     })
                     .peek(document -> document.setProject(cadProject))
@@ -121,8 +127,7 @@ public class DocumentService {
             item = new Item(document);
             item.setStatus(DocumentStatus.UNDEFINED);
             //Сохраняем в бд
-        }
-        else {
+        } else {
             item = itemOptional.get();
         }
 
@@ -138,7 +143,7 @@ public class DocumentService {
         item.setLastModify(lastModify);
 
         //устанавливаем разработчика
-        if (documentStatus == DocumentStatus.MARKED_AS_READY){
+        if (documentStatus == DocumentStatus.MARKED_AS_READY) {
             item.setDeveloper(lastModify);
         }
 
@@ -173,11 +178,11 @@ public class DocumentService {
 
      */
 
-    private PdmUser getResponsible(Item item, DocumentStatus documentStatus, DocumentStatus previousStatus){
+    private PdmUser getResponsible(Item item, DocumentStatus documentStatus, DocumentStatus previousStatus) {
         CadProject cadProject = item.getProject();
         switch (documentStatus) {
             case MARKED_AS_READY: {
-                if  (previousStatus != null){
+                if (previousStatus != null) {
                     switch (previousStatus) {
                         case CHECKER_MARKED_AS_NOT_READY: {
                             return cadProject.getChecking();
@@ -192,32 +197,31 @@ public class DocumentService {
                             return cadProject.getApproved();
                         }
                     }
-                }
-                else return cadProject.getChecking();
+                } else return cadProject.getChecking();
 
             }
-            case CHECKER_MARKED_AS_NOT_READY:{
+            case CHECKER_MARKED_AS_NOT_READY: {
                 return item.getDeveloper();
             }
-            case CHECKER_MARKED_AS_READY:{
-                return cadProject.getTechnicalControl()==null?cadProject.getStandardControl():cadProject.getTechnicalControl();
+            case CHECKER_MARKED_AS_READY: {
+                return cadProject.getTechnicalControl() == null ? cadProject.getStandardControl() : cadProject.getTechnicalControl();
             }
-            case STANDARD_CONTROL_MARKED_AS_NOT_READY:{
+            case STANDARD_CONTROL_MARKED_AS_NOT_READY: {
                 return item.getDeveloper();
             }
-            case STANDARD_CONTROL_MARKED_AS_READY:{
+            case STANDARD_CONTROL_MARKED_AS_READY: {
                 return cadProject.getApproved();
             }
-            case TECHNICAL_CONTROL_MARKED_AS_NOT_READY:{
+            case TECHNICAL_CONTROL_MARKED_AS_NOT_READY: {
                 return item.getDeveloper();
             }
-            case TECHNICAL_CONTROL_MARKED_AS_READY:{
+            case TECHNICAL_CONTROL_MARKED_AS_READY: {
                 return cadProject.getStandardControl();
             }
-            case APPROVED_MARKED_AS_NOT_READY:{
+            case APPROVED_MARKED_AS_NOT_READY: {
                 return item.getDeveloper();
             }
-            case APPROVED_MARKED_AS_READY:{
+            case APPROVED_MARKED_AS_READY: {
                 return null;
             }
         }

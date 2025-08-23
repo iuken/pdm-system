@@ -4,12 +4,16 @@ package ru.aziattsev.pdm_system.services;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.aziattsev.pdm_system.entity.CadProject;
+import ru.aziattsev.pdm_system.entity.Document;
 import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.EngineeringElementRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 @Service
 public class ItemService {
@@ -50,7 +54,39 @@ public class ItemService {
         return itemRepository.findAllByProject(cadProject);
     }
 
-    public void updateFromProjectStructure(){
+    public List<Item> findAllByProjectIdWithExistedDocument(Long id) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(id);
+
+        List<Item> items = itemRepository.findByProjectAndDocumentIsExistTrue(cadProject);
+
+        // компилируем regex-паттерны, но игнорируем битые
+        List<Pattern> ignorePatterns = cadProject.getIgnorePatterns().stream()
+                .map(p -> {
+                    try {
+                        return Pattern.compile(p, Pattern.CASE_INSENSITIVE);
+                    } catch (PatternSyntaxException e) {
+                        //log.warn("Некорректный regex в проекте {}: '{}'", cadProject.getId(), p);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return items.stream()
+                .filter(item -> {
+                    Document doc = item.getDocument();
+                    if (doc == null || doc.getFilePath() == null) return false;
+
+                    String filePath = doc.getFilePath().replace("\\", "/");
+
+                    // исключаем документ, если он совпадает хотя бы с одним regex
+                    return ignorePatterns.stream().noneMatch(p -> p.matcher(filePath).matches());
+                })
+                .toList();
+    }
+
+
+    public void updateFromProjectStructure() {
         List<Item> items = itemRepository.findAll();
 
         for (Item item : items) {
