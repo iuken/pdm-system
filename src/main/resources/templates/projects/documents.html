@@ -19,8 +19,18 @@
         .file-table tr.row-odd { background-color: #ffffff; }
         .file-table tr.row-even { background-color: #e9ecef; }
         .status-icons i { margin-right: 0.3rem; }
-        .folder i { transition: color 0.2s; margin-right: 0.3rem; }
+        .folder-title {
+            background-color: #d0e7ff; /* светло-голубой фон только для строки с названием */
+            padding: 0.1rem 0.1rem; /* увеличиваем вертикальный отступ */
+            display: flex; /* чтобы иконка и текст оставались на одной линии */
+            align-items: center; /* вертикальное выравнивание по центру */
+        }
 
+        .folder i {
+            margin-left: 5px; /* отступ перед иконкой */
+            margin-right: 10px; /* чтобы иконка не прилипала к тексту */
+            transition: color 0.2s;
+        }
         /* Фильтры */
         .filter-row { margin-bottom: 1rem; }
         .filter-row input { width: 100%; }
@@ -34,6 +44,7 @@
             align-items: center;
             gap: 0.3rem;
         }
+
     </style>
 </head>
 <body>
@@ -136,82 +147,113 @@
 
     let globalFileRowIndex = 0;
     function renderTree(node, parentEl) {
+        // Разделяем ключи на папки и файлы
+        const folderKeys = [];
+        const fileKeys = [];
+
         Object.keys(node).forEach(key => {
+            if (node[key].__files.length > 0) {
+                fileKeys.push(key);
+            } else {
+                folderKeys.push(key);
+            }
+        });
+
+        // Сортируем по алфавиту
+        folderKeys.sort((a, b) => a.localeCompare(b));
+        fileKeys.sort((a, b) => a.localeCompare(b));
+
+        // Сначала рендерим папки
+        folderKeys.forEach(key => {
             const entry = node[key];
             const li = document.createElement('li');
+            li.classList.add('folder');
 
-            if (entry.__files.length > 0) {
-                const table = document.createElement('table');
-                table.classList.add('file-table');
+            const titleDiv = document.createElement('div');
+            titleDiv.classList.add('folder-title');
 
-                const colgroup = document.createElement('colgroup');
-                colgroup.innerHTML = `<col><col><col><col>`;
-                table.appendChild(colgroup);
+            const icon = document.createElement('i');
+            icon.classList.add('bi', 'bi-folder2-open', 'text-primary');
+            titleDiv.appendChild(icon);
 
-                entry.__files.forEach(file => {
-                    const row = document.createElement('tr');
-                    row.classList.add(globalFileRowIndex % 2 === 0 ? 'row-odd' : 'row-even');
-                    globalFileRowIndex++;
+// Название папки
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = ` ${key} `;
+            titleDiv.appendChild(nameSpan);
 
-                    row.innerHTML = `
-                        <td><img src="/img/file-icon.png" class="file-icon"> ${key}</td>
-                        <td class="status-icons"><i class="bi ${statusIcons[file.statusName]}"></i> ${file.statusDisplayName}</td>
-                        <td>${file.lastModifyDisplayName}</td>
-                        <td>${file.responsibleDisplayName}</td>
-                    `;
-                    table.appendChild(row);
-                });
+// Статус-иконки
+            const statusSpan = document.createElement('span');
+            statusSpan.classList.add('status-icons');
+            titleDiv.appendChild(statusSpan);
 
-                li.appendChild(table);
+            li.appendChild(titleDiv);
 
-            } else {
-                li.classList.add('folder');
-                const icon = document.createElement('i');
-                icon.classList.add('bi', 'bi-folder2-open', 'text-primary');
-                li.appendChild(icon);
-                li.append(` ${key} `);
+            const ul = document.createElement('ul');
+            ul.classList.add('tree');
+            renderTree(entry.__children, ul);
+            li.appendChild(ul);
 
-                const statusSpan = document.createElement('span');
-                statusSpan.classList.add('status-icons');
-                li.appendChild(statusSpan);
-
-                const ul = document.createElement('ul');
-                ul.classList.add('tree');
-                renderTree(entry.__children, ul);
-                li.appendChild(ul);
-
-                const counts = { 'UNDEFINED': 0, 'MARKED_AS_READY': 0, 'READY': 0, 'NOT_READY': 0 };
-                (function countStatuses(n) {
-                    Object.values(n).forEach(e => {
-                        e.__files.forEach(f => {
-                            const st = normalizeStatus(f.statusName);
-                            counts[st]++;
-                        });
-                        countStatuses(e.__children);
+            // Считаем статусы
+            const counts = { 'UNDEFINED': 0, 'MARKED_AS_READY': 0, 'READY': 0, 'NOT_READY': 0 };
+            (function countStatuses(n) {
+                Object.values(n).forEach(e => {
+                    e.__files.forEach(f => {
+                        const st = normalizeStatus(f.statusName);
+                        counts[st]++;
                     });
-                })(entry.__children);
-
-                Object.entries(counts).forEach(([s, c]) => {
-                    if (c > 0) statusSpan.innerHTML += ` <i class="bi ${summaryIcons[s]}"></i>${c}`;
+                    countStatuses(e.__children);
                 });
+            })(entry.__children);
 
-                icon.addEventListener('click', e => {
-                    e.stopPropagation();
-                    ul.classList.toggle('d-none');
-                    if (ul.classList.contains('d-none')) {
-                        icon.classList.remove('bi-folder2-open', 'text-primary');
-                        icon.classList.add('bi-folder2', 'text-secondary');
-                    } else {
-                        icon.classList.remove('bi-folder2', 'text-secondary');
-                        icon.classList.add('bi-folder2-open', 'text-primary');
-                    }
-                });
-            }
+            Object.entries(counts).forEach(([s, c]) => {
+                if (c > 0) statusSpan.innerHTML += ` <i class="bi ${summaryIcons[s]}"></i>${c}`;
+            });
+
+            icon.addEventListener('click', e => {
+                e.stopPropagation();
+                ul.classList.toggle('d-none');
+                if (ul.classList.contains('d-none')) {
+                    icon.classList.remove('bi-folder2-open', 'text-primary');
+                    icon.classList.add('bi-folder2', 'text-secondary');
+                } else {
+                    icon.classList.remove('bi-folder2', 'text-secondary');
+                    icon.classList.add('bi-folder2-open', 'text-primary');
+                }
+            });
 
             parentEl.appendChild(li);
         });
-    }
 
+        // Потом рендерим файлы
+        fileKeys.forEach(key => {
+            const entry = node[key];
+            const li = document.createElement('li');
+
+            const table = document.createElement('table');
+            table.classList.add('file-table');
+
+            const colgroup = document.createElement('colgroup');
+            colgroup.innerHTML = `<col><col><col><col>`;
+            table.appendChild(colgroup);
+
+            entry.__files.forEach(file => {
+                const row = document.createElement('tr');
+                row.classList.add(globalFileRowIndex % 2 === 0 ? 'row-odd' : 'row-even');
+                globalFileRowIndex++;
+
+                row.innerHTML = `
+                <td><img src="/img/file-icon.png" class="file-icon"> ${key}</td>
+                <td class="status-icons"><i class="bi ${statusIcons[file.statusName]}"></i> ${file.statusDisplayName}</td>
+                <td>${file.lastModifyDisplayName}</td>
+                <td>${file.responsibleDisplayName}</td>
+            `;
+                table.appendChild(row);
+            });
+
+            li.appendChild(table);
+            parentEl.appendChild(li);
+        });
+    }
     document.addEventListener('DOMContentLoaded', () => {
         const tree = buildTree(items);
         renderTree(tree, document.getElementById('docTree'));
