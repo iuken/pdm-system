@@ -3,6 +3,7 @@ package ru.aziattsev.pdm_system.services;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.aziattsev.pdm_system.dto.ItemDto;
 import ru.aziattsev.pdm_system.entity.CadProject;
 import ru.aziattsev.pdm_system.entity.Document;
 import ru.aziattsev.pdm_system.entity.Item;
@@ -10,6 +11,7 @@ import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.EngineeringElementRepository;
 import ru.aziattsev.pdm_system.repository.ItemRepository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -105,36 +107,42 @@ public class ItemService {
         itemRepository.saveAll(items);
     }
 
-    public List<Item> findFilteredByProjectId(Long projectId,
-                                              String filename,
-                                              String status,
-                                              String lastModify,
-                                              String responsible) {
-        // Сначала получаем все документы проекта
-        List<Item> items = findAllByProjectIdWithExistedDocument(projectId);
+    public List<ItemDto> findFilteredByProjectId(Long projectId,
+                                                  String filename,
+                                                  String status,
+                                                  String lastModify,
+                                                  String responsible) {
+        List<ItemDto> items = findAllByProjectIdWithDto(projectId);
 
-        // Фильтруем по введенным параметрам с игнорированием регистра
         return items.stream()
-                .filter(item -> filename == null || filename.isBlank()
-                        || (item.getDocument() != null
-                        && item.getDocument().getClientFilePath() != null
-                        && item.getDocument().getClientFilePath().toLowerCase()
-                        .contains(filename.toLowerCase())))
-                .filter(item -> status == null || status.isBlank()
-                        || (item.getStatus() != null
-                        && item.getStatus().getDisplayName() != null
-                        && item.getStatus().getDisplayName().toLowerCase()
-                        .contains(status.toLowerCase())))
-                .filter(item -> lastModify == null || lastModify.isBlank()
-                        || (item.getLastModify() != null
-                        && item.getLastModify().getDisplayName() != null
-                        && item.getLastModify().getDisplayName().toLowerCase()
-                        .contains(lastModify.toLowerCase())))
-                .filter(item -> responsible == null || responsible.isBlank()
-                        || (item.getResponsible() != null
-                        && item.getResponsible().getDisplayName() != null
-                        && item.getResponsible().getDisplayName().toLowerCase()
-                        .contains(responsible.toLowerCase())))
+                .filter(dto -> filename == null || filename.isBlank() ||
+                        (dto.getClientFilePath() != null &&
+                                dto.getClientFilePath().toLowerCase().contains(filename.toLowerCase())))
+                .filter(dto -> status == null || status.isBlank() ||
+                        (dto.getStatusDisplayName() != null &&
+                                dto.getStatusDisplayName().toLowerCase().contains(status.toLowerCase())))
+                .filter(dto -> lastModify == null || lastModify.isBlank() ||
+                        (dto.getLastModifyDisplayName() != null &&
+                                dto.getLastModifyDisplayName().toLowerCase().contains(lastModify.toLowerCase())))
+                .filter(dto -> responsible == null || responsible.isBlank() ||
+                        (dto.getResponsibleDisplayName() != null &&
+                                dto.getResponsibleDisplayName().toLowerCase().contains(responsible.toLowerCase())))
+                .sorted(Comparator.comparing(ItemDto::getClientFilePath, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public List<ItemDto> findAllByProjectIdWithDto(Long projectId) {
+        return itemRepository.findAllByProjectIdWithDto(projectId).stream()
+                .map(dto -> {
+                    String statusName = dto.getStatus() != null ? dto.getStatus().name() : "UNDEFINED";
+                    return new ItemDto(
+                            dto.getId(),
+                            dto.getClientFilePath(),  // путь уже конвертируется в конструкторе DTO
+                            dto.getStatus(),           // новое поле
+                            dto.getLastModifyDisplayName() != null ? dto.getLastModifyDisplayName() : "Не указан",
+                            dto.getResponsibleDisplayName() != null ? dto.getResponsibleDisplayName() : "Не указан"
+                    );
+                })
                 .toList();
     }
 }

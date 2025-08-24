@@ -10,7 +10,7 @@ public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column
-    private Long Id;
+    private Long id;
 
     @JoinColumn
     @ManyToOne
@@ -79,11 +79,11 @@ public class Item {
     }
 
     public Long getId() {
-        return Id;
+        return id;
     }
 
     public void setId(Long id) {
-        Id = id;
+        this.id = id;
     }
 
     public Document getDocument() {
@@ -93,8 +93,6 @@ public class Item {
     public void setDocument(Document document) {
         this.document = document;
     }
-
-
 
     public List<PdmUser> getParticipants() {
         return participants;
@@ -175,8 +173,6 @@ public class Item {
     public void setProject(CadProject project) {
         this.project = project;
     }
-
-
 
     public List<ItemProcurement> getProcurements() {
         return procurements;

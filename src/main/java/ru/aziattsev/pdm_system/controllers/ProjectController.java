@@ -3,8 +3,8 @@ package ru.aziattsev.pdm_system.controllers;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import ru.aziattsev.pdm_system.dto.ItemDto;
 import ru.aziattsev.pdm_system.entity.CadProject;
-import ru.aziattsev.pdm_system.entity.Item;
 import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.CadProjectService;
 import ru.aziattsev.pdm_system.services.ItemService;
@@ -44,24 +44,27 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}/documents")
-    public String viewProjectDocuments(
-            @PathVariable Long id,
-            @RequestParam(required = false) String filename,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String lastModify,
-            @RequestParam(required = false) String responsible,
-            Model model) {
+    public String viewProjectDocuments(@PathVariable Long id,
+                                        @RequestParam(required = false) String filename,
+                                        @RequestParam(required = false) String status,
+                                        @RequestParam(required = false) String lastModify,
+                                        @RequestParam(required = false) String responsible,
+                                        Model model) {
 
-        Map<String, String> searchParams = new HashMap<>();
-        searchParams.put("filename", filename != null ? filename : "");
-        searchParams.put("status", status != null ? status : "");
-        searchParams.put("lastModify", lastModify != null ? lastModify : "");
-        searchParams.put("responsible", responsible != null ? responsible : "");
-
-        List<Item> items = itemService.findFilteredByProjectId(id, filename, status, lastModify, responsible);
-
-        model.addAttribute("project", projectService.findById(id).orElse(null));
+        // Получаем отфильтрованные документы
+        List<ItemDto> items = itemService.findFilteredByProjectId(id, filename, status, lastModify, responsible);
         model.addAttribute("items", items);
+
+        // Добавляем сам проект для Thymeleaf
+        projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));
+
+        // Сохраняем фильтры для отображения в форме
+        Map<String, String> searchParams = new HashMap<>();
+        searchParams.put("filename", filename);
+        searchParams.put("status", status);
+        searchParams.put("lastModify", lastModify);
+        searchParams.put("responsible", responsible);
+
         model.addAttribute("searchParams", searchParams);
 
         return "projects/documents";
