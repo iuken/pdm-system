@@ -35,6 +35,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             "left join i.document d " +
             "left join i.lastModify lm " +
             "left join i.responsible r " +
-            "where i.project.id = :projectId")
+            "where i.project.id = :projectId " +
+            "and d.isExist = true")
     List<ItemDto> findAllByProjectIdWithDto(@Param("projectId") Long projectId);
 }

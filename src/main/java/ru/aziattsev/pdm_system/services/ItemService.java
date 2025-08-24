@@ -132,17 +132,38 @@ public class ItemService {
     }
 
     public List<ItemDto> findAllByProjectIdWithDto(Long projectId) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
+
+        // компилируем regex-паттерны игнорирования
+        List<Pattern> ignorePatterns = cadProject.getIgnorePatterns().stream()
+                .map(p -> {
+                    try {
+                        return Pattern.compile(p, Pattern.CASE_INSENSITIVE);
+                    } catch (PatternSyntaxException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
         return itemRepository.findAllByProjectIdWithDto(projectId).stream()
+                // фильтр по существующим документам и игнорируемым паттернам
+                .filter(dto -> {
+                    if (dto.getClientFilePath() == null) return false;
+                    String filePath = dto.getClientFilePath().replace("\\", "/");
+                    return ignorePatterns.stream().noneMatch(p -> p.matcher(filePath).matches());
+                })
                 .map(dto -> {
                     String statusName = dto.getStatus() != null ? dto.getStatus().name() : "UNDEFINED";
                     return new ItemDto(
                             dto.getId(),
-                            dto.getClientFilePath(),  // путь уже конвертируется в конструкторе DTO
-                            dto.getStatus(),           // новое поле
+                            dto.getClientFilePath(),
+                            dto.getStatus(),
                             dto.getLastModifyDisplayName() != null ? dto.getLastModifyDisplayName() : "Не указан",
                             dto.getResponsibleDisplayName() != null ? dto.getResponsibleDisplayName() : "Не указан"
                     );
                 })
                 .toList();
     }
+
 }
