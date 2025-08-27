@@ -154,10 +154,11 @@ public class ItemService {
                     return ignorePatterns.stream().noneMatch(p -> p.matcher(filePath).matches());
                 })
                 .map(dto -> {
+                    String clientPath = PathConverter.toClientPath(dto.getClientFilePath());
                     String statusName = dto.getStatus() != null ? dto.getStatus().name() : "UNDEFINED";
                     return new ItemDto(
                             dto.getId(),
-                            dto.getClientFilePath(),
+                            clientPath,
                             dto.getStatus(),
                             dto.getLastModifyDisplayName() != null ? dto.getLastModifyDisplayName() : "Не указан",
                             dto.getResponsibleDisplayName() != null ? dto.getResponsibleDisplayName() : "Не указан"
