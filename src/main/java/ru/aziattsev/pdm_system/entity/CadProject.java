@@ -74,7 +74,7 @@ public class CadProject {
     }
 
     public void setDirectory(String serverDirectory) {
-        this.directory = serverDirectory;
+        this.directory = serverDirectory.replace("\"", "");
     }
 
 
@@ -83,7 +83,7 @@ public class CadProject {
     }
 
     public void setMainAssemblyPath(String serverMainAssemblyPath) {
-        this.mainAssemblyPath = serverMainAssemblyPath;
+        this.mainAssemblyPath = serverMainAssemblyPath.replace("\"", "");
     }
 
     public String getStructurePath() {
@@ -91,7 +91,7 @@ public class CadProject {
     }
 
     public void setStructurePath(String serverStructurePath) {
-        this.structurePath = serverStructurePath;
+        this.structurePath = serverStructurePath.replace("\"", "");
     }
 
 
