@@ -116,7 +116,7 @@ public interface EngineeringElementRepository extends JpaRepository<EngineeringE
             "COALESCE(parent.fullDesignation, '')) " +
             "FROM EngineeringElement e " +
             "LEFT JOIN e.parent parent " +
-            "WHERE e.section = 'Сборочные единицы' " +
+            "WHERE e.section like '%Сборочные единицы%' " +
             "AND e.cadProject.id = :cadProjectId " +
             "AND NOT EXISTS (" +
             "    SELECT 1 FROM EngineeringElement child " +
