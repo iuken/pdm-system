@@ -42,7 +42,6 @@ public class EngineeringDataController {
             }
 
             dataService.importXmlFile(filePath, projectId);
-            dataService.linkElementsToItems(projectId);
             itemService.updateFromProjectStructure();
 
             return ResponseEntity.ok()

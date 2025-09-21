@@ -90,7 +90,7 @@
 </div>
 
 <script th:inline="javascript">
-    const items = /*[[${items}]]*/ [];
+    const docs = /*[[${docs}]]*/ [];
 
     const statusIcons = {
         'UNDEFINED': 'bi-hourglass text-secondary',
@@ -119,25 +119,25 @@
         'NOT_READY': 'bi-x-circle text-danger'
     };
 
-    function buildTree(items) {
+    function buildTree(docs) {
         const root = {};
-        items.forEach(item => {
+        docs.forEach(doc => {
             // Применяем фильтры
             const filenameFilter = document.querySelector('input[name="filename"]').value.toLowerCase();
             const statusFilter = document.querySelector('input[name="status"]').value.toLowerCase();
             const lastModifyFilter = document.querySelector('input[name="lastModify"]').value.toLowerCase();
             const responsibleFilter = document.querySelector('input[name="responsible"]').value.toLowerCase();
 
-            if ((item.clientFilePath || '').toLowerCase().includes(filenameFilter)
-                && (item.statusDisplayName || '').toLowerCase().includes(statusFilter)
-                && (item.lastModifyDisplayName || '').toLowerCase().includes(lastModifyFilter)
-                && (item.responsibleDisplayName || '').toLowerCase().includes(responsibleFilter)) {
+            if ((doc.clientFilePath || '').toLowerCase().includes(filenameFilter)
+                && (doc.statusDisplayName || '').toLowerCase().includes(statusFilter)
+                && (doc.lastModifyDisplayName || '').toLowerCase().includes(lastModifyFilter)
+                && (doc.responsibleDisplayName || '').toLowerCase().includes(responsibleFilter)) {
 
-                const path = item.clientFilePath?.split(/[\\/]/) || [];
+                const path = doc.clientFilePath?.split(/[\\/]/) || [];
                 let node = root;
                 path.forEach((part, idx) => {
                     if (!node[part]) node[part] = { __children: {}, __files: [] };
-                    if (idx === path.length - 1) node[part].__files.push(item);
+                    if (idx === path.length - 1) node[part].__files.push(doc);
                     node = node[part].__children;
                 });
             }
@@ -255,12 +255,12 @@
         });
     }
     document.addEventListener('DOMContentLoaded', () => {
-        const tree = buildTree(items);
+        const tree = buildTree(docs);
         renderTree(tree, document.getElementById('docTree'));
 
         // Считаем общее количество файлов
         let totalFiles = 0;
-        items.forEach(item => totalFiles++);
+        docs.forEach(doc => totalFiles++);
         document.getElementById('total-count').querySelector('span')?.remove(); // удаляем старый span
         document.getElementById('total-count').innerHTML = `<i class="bi bi-list-check"></i> Всего: ${totalFiles}`;
     });

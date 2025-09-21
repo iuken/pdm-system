@@ -68,14 +68,45 @@ public class Document {
     @ManyToOne
     private CadProject project;
 
-    public Document(String filePath, Date creationTime, Date lastModifiedTime) {
-        this.filePath = filePath;
-        this.creationTime = creationTime;
-        this.lastModifiedTime = lastModifiedTime;
+    @Column
+    private Priority priority;
+
+    @Column
+    private DocumentStatus status;
+
+    @JoinColumn
+    @ManyToOne
+    private PdmUser responsible;
+
+    @JoinColumn
+    @ManyToOne
+    private PdmUser lastModify;
+
+    @JoinColumn
+    @ManyToOne
+    private PdmUser developer;
+
+    public Document() {
+        this.isExist = false;
+        this.setStatus(DocumentStatus.UNDEFINED);
     }
 
     public Document(String filePath) {
         this.filePath = filePath;
+        this.setStatus(DocumentStatus.UNDEFINED);
+    }
+
+    public Document(String filePath, boolean isExist) {
+        this.filePath = filePath;
+        this.isExist = isExist;
+        this.setStatus(DocumentStatus.UNDEFINED);
+    }
+
+    public Document(String filePath, Date creationTime, Date lastModifiedTime) {
+        this.filePath = filePath;
+        this.creationTime = creationTime;
+        this.lastModifiedTime = lastModifiedTime;
+        this.setStatus(DocumentStatus.UNDEFINED);
     }
 
     public Document(String filePath, Date creationTime, Date lastModifiedTime, boolean isExist) {
@@ -83,15 +114,7 @@ public class Document {
         this.creationTime = creationTime;
         this.lastModifiedTime = lastModifiedTime;
         this.isExist = isExist;
-    }
-
-    public Document(String filePath, boolean isExist) {
-        this.filePath = filePath;
-        this.isExist = isExist;
-    }
-
-    public Document() {
-        this.isExist = false;
+        this.setStatus(DocumentStatus.UNDEFINED);
     }
 
     public Long getId() {
@@ -258,5 +281,43 @@ public class Document {
         this.project = project;
     }
 
+    public Priority getPriority() {
+        return priority;
+    }
 
+    public void setPriority(Priority priority) {
+        this.priority = priority;
+    }
+
+    public DocumentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(DocumentStatus status) {
+        this.status = status;
+    }
+
+    public PdmUser getResponsible() {
+        return responsible;
+    }
+
+    public void setResponsible(PdmUser responsible) {
+        this.responsible = responsible;
+    }
+
+    public PdmUser getLastModify() {
+        return lastModify;
+    }
+
+    public void setLastModify(PdmUser lastModify) {
+        this.lastModify = lastModify;
+    }
+
+    public PdmUser getDeveloper() {
+        return developer;
+    }
+
+    public void setDeveloper(PdmUser developer) {
+        this.developer = developer;
+    }
 }

@@ -3,10 +3,11 @@ package ru.aziattsev.pdm_system.controllers;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import ru.aziattsev.pdm_system.dto.ItemDto;
+import ru.aziattsev.pdm_system.dto.DocumentDto;
 import ru.aziattsev.pdm_system.entity.CadProject;
 import ru.aziattsev.pdm_system.repository.PdmUserRepository;
 import ru.aziattsev.pdm_system.services.CadProjectService;
+import ru.aziattsev.pdm_system.services.DocumentService;
 import ru.aziattsev.pdm_system.services.ItemService;
 
 import java.util.*;
@@ -18,10 +19,12 @@ public class ProjectController {
     private final ItemService itemService;
     private final PdmUserRepository userRepository;
 
-    public ProjectController(CadProjectService projectService, ItemService itemService, PdmUserRepository userRepository) {
+    private final DocumentService documentService;
+    public ProjectController(CadProjectService projectService, ItemService itemService, PdmUserRepository userRepository, DocumentService documentService) {
         this.projectService = projectService;
         this.itemService = itemService;
         this.userRepository = userRepository;
+        this.documentService = documentService;
     }
 
     @GetMapping
@@ -45,15 +48,15 @@ public class ProjectController {
 
     @GetMapping("/{id}/documents")
     public String viewProjectDocuments(@PathVariable Long id,
-                                        @RequestParam(required = false) String filename,
-                                        @RequestParam(required = false) String status,
-                                        @RequestParam(required = false) String lastModify,
-                                        @RequestParam(required = false) String responsible,
-                                        Model model) {
+                                       @RequestParam(required = false) String filename,
+                                       @RequestParam(required = false) String status,
+                                       @RequestParam(required = false) String lastModify,
+                                       @RequestParam(required = false) String responsible,
+                                       Model model) {
 
         // Получаем отфильтрованные документы
-        List<ItemDto> items = itemService.findFilteredByProjectId(id, filename, status, lastModify, responsible);
-        model.addAttribute("items", items);
+        List<DocumentDto> documents = documentService.findFilteredByProjectId(id, filename, status, lastModify, responsible);
+        model.addAttribute("docs", documents);
 
         // Добавляем сам проект для Thymeleaf
         projectService.findById(id).ifPresent(project -> model.addAttribute("project", project));

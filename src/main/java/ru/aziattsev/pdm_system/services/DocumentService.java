@@ -3,6 +3,7 @@ package ru.aziattsev.pdm_system.services;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.aziattsev.pdm_system.dto.DocumentDto;
 import ru.aziattsev.pdm_system.entity.*;
 import ru.aziattsev.pdm_system.repository.CadProjectRepository;
 import ru.aziattsev.pdm_system.repository.DocumentRepository;
@@ -14,9 +15,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
 @Service
@@ -36,69 +37,64 @@ public class DocumentService {
         this.pdmUserRepository = pdmUserRepository;
     }
 
+    @Transactional
     public void UploadFromPath(String projectPath, Long projectId) {
         CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
 
-
+        // Сбрасываем isExist для всех документов проекта
         List<Document> existingDocuments = documentRepository.findByProject(cadProject);
         existingDocuments.forEach(doc -> doc.setExist(false));
         documentRepository.saveAll(existingDocuments);
 
         File dir = new File(projectPath);
+
         try (Stream<Path> stream = Files.walk(dir.toPath())) {
-            stream.filter(file -> FilenameUtils.getExtension(file.toString()).equals("grb"))
-                    .map(file -> {
-                        try {
-                            String normalizedPath = file.toAbsolutePath().normalize().toString();
-                            String serverPath = PathConverter.toServerPath(normalizedPath);
-                            Date creationTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).creationTime().toMillis());
-                            Date lastModifiedTime = new Date(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
-                            return new Document(serverPath, creationTime, lastModifiedTime, true);
-                        } catch (IOException e) {
-                            String normalizedPath = file.toAbsolutePath().normalize().toString();
-                            String serverPath = PathConverter.toServerPath(normalizedPath);
-                            return new Document(serverPath, true);
-                        }
-                    })
-                    .peek(document -> document.setProject(cadProject))
-                    .forEach(this::update);
+            stream.filter(file -> "grb".equalsIgnoreCase(FilenameUtils.getExtension(file.toString())))
+                    .map(file -> createDocumentFromFile(file, cadProject))
+                    .forEach(this::updateDocument); // обновляем документ в БД
         } catch (IOException e) {
-            e.printStackTrace(); // или логгер
+            e.printStackTrace(); // или использовать логгер
         }
     }
 
+    private Document createDocumentFromFile(Path file, CadProject project) {
+        try {
+            String normalizedPath = file.toAbsolutePath().normalize().toString();
+            String serverPath = PathConverter.toServerPath(normalizedPath);
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+            Date creationTime = new Date(attrs.creationTime().toMillis());
+            Date lastModifiedTime = new Date(attrs.lastModifiedTime().toMillis());
+
+            Document doc = new Document(serverPath, creationTime, lastModifiedTime, true);
+            doc.setProject(project);
+            return doc;
+        } catch (IOException e) {
+            String normalizedPath = file.toAbsolutePath().normalize().toString();
+            String serverPath = PathConverter.toServerPath(normalizedPath);
+
+            Document doc = new Document(serverPath, true);
+            doc.setProject(project);
+            return doc;
+        }
+    }
 
     @Transactional
-    public void update(Document document) {
-        System.out.println("внутри метода update");
-        Optional<Document> document1 = documentRepository.findFirstByFilePath(document.getFilePath());
-        if (document1.isPresent()) {
-            System.out.println("документ найден");
-            document.setId(document1.get().getId());
-        }
-        if (!document1.isPresent()) {
-            System.out.println("документ не найден");
-        }
-        documentRepository.save(document);
+    public void updateDocument(Document document) {
+        Optional<Document> existingDoc = documentRepository.findFirstByFilePath(document.getFilePath());
 
-        Optional<Item> itemOptional = itemRepository.findFirstByDocument(document);
-        if (itemOptional.isEmpty()) {
-            itemRepository.save(new Item(document));
-        }
+        existingDoc.ifPresent(doc -> document.setId(doc.getId())); // если найден — обновляем существующий
 
+        documentRepository.save(document); // сохраняем или обновляем
     }
 
     @Transactional
     public void updateFromCad(DocumentRequest documentRequest) {
-        Optional<Document> document1 = documentRepository.findFirstByFilePath(PathConverter.toServerPath(documentRequest.filePath()));
-        DocumentStatus documentStatus = DocumentStatus.UNDEFINED;
-        Document document;
-        if (document1.isPresent()) {
-            document = document1.get();
+        Optional<Document> documentOptional = documentRepository.findFirstByFilePath(
+                PathConverter.toServerPath(documentRequest.filePath())
+        );
 
-        } else {
-            document = new Document();
-        }
+        Document document = documentOptional.orElseGet(Document::new);
+
         document.setDesignation(documentRequest.designation());
         document.setName(documentRequest.name());
         document.setModelMaker(documentRequest.modelMaker());
@@ -114,43 +110,27 @@ public class DocumentService {
         document.setxSize(documentRequest.xSize());
         document.setySize(documentRequest.ySize());
         document.setzSize(documentRequest.zSize());
+
+        // статус документа
+        DocumentStatus previousStatus = document.getStatus();
+        DocumentStatus newStatus = documentRequest.documentStatus();
+        document.setStatus(newStatus);
+
+        // устанавливаем последнего изменившего
+        PdmUser lastModify = pdmUserRepository
+                .findByUsername(documentRequest.user())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + documentRequest.user()));
+        document.setLastModify(lastModify);
+
+        // устанавливаем разработчика
+        if (newStatus == DocumentStatus.MARKED_AS_READY) {
+            document.setDeveloper(lastModify);
+        }
+
+        // ответственный определяется бизнес-логикой
+        document.setResponsible(getResponsible(document, newStatus, previousStatus));
+
         documentRepository.save(document);
-
-        documentStatus = documentRequest.documentStatus();
-        Item item;
-        //поиск объекта связаного с этим документом
-        Optional<Item> itemOptional = itemRepository.findFirstByDocument(document);
-        //если такой обект существует ничего не делаем, ссылка обновится
-        //если не существует
-        if (itemOptional.isEmpty()) {
-            //создаем объект
-            item = new Item(document);
-            item.setStatus(DocumentStatus.UNDEFINED);
-            //Сохраняем в бд
-        } else {
-            item = itemOptional.get();
-        }
-
-        //запоминаем предыдущий статус
-        DocumentStatus previousStatus = item.getStatus();
-
-        //устанавливаем новый статус
-        item.setStatus(documentStatus);
-
-        //устанавливаем последнего изменившего
-        Optional<PdmUser> lastModifyOptional = pdmUserRepository.findByUsername(documentRequest.user());
-        PdmUser lastModify = lastModifyOptional.get();
-        item.setLastModify(lastModify);
-
-        //устанавливаем разработчика
-        if (documentStatus == DocumentStatus.MARKED_AS_READY) {
-            item.setDeveloper(lastModify);
-        }
-
-
-        item.setResponsible(getResponsible(item, documentStatus, previousStatus));
-
-        itemRepository.save(item);
     }
 
     /*
@@ -178,8 +158,8 @@ public class DocumentService {
 
      */
 
-    private PdmUser getResponsible(Item item, DocumentStatus documentStatus, DocumentStatus previousStatus) {
-        CadProject cadProject = item.getProject();
+    private PdmUser getResponsible(Document document, DocumentStatus documentStatus, DocumentStatus previousStatus) {
+        CadProject cadProject = document.getProject();
         switch (documentStatus) {
             case MARKED_AS_READY: {
                 if (previousStatus != null) {
@@ -201,25 +181,25 @@ public class DocumentService {
 
             }
             case CHECKER_MARKED_AS_NOT_READY: {
-                return item.getDeveloper();
+                return document.getDeveloper();
             }
             case CHECKER_MARKED_AS_READY: {
                 return cadProject.getTechnicalControl() == null ? cadProject.getStandardControl() : cadProject.getTechnicalControl();
             }
             case STANDARD_CONTROL_MARKED_AS_NOT_READY: {
-                return item.getDeveloper();
+                return document.getDeveloper();
             }
             case STANDARD_CONTROL_MARKED_AS_READY: {
                 return cadProject.getApproved();
             }
             case TECHNICAL_CONTROL_MARKED_AS_NOT_READY: {
-                return item.getDeveloper();
+                return document.getDeveloper();
             }
             case TECHNICAL_CONTROL_MARKED_AS_READY: {
                 return cadProject.getStandardControl();
             }
             case APPROVED_MARKED_AS_NOT_READY: {
-                return item.getDeveloper();
+                return document.getDeveloper();
             }
             case APPROVED_MARKED_AS_READY: {
                 return null;
@@ -227,4 +207,95 @@ public class DocumentService {
         }
         return null;
     }
+
+    public List<Document> findAllByProjectIdWithExistedDocument(Long id) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(id);
+
+        // Берём только документы, у которых isExist = true
+        List<Document> documents = documentRepository.findByProjectAndIsExistTrue(cadProject);
+
+        // компилируем regex-паттерны, но игнорируем битые
+        List<Pattern> ignorePatterns = cadProject.getIgnorePatterns().stream()
+                .map(p -> {
+                    try {
+                        return Pattern.compile(p, Pattern.CASE_INSENSITIVE);
+                    } catch (PatternSyntaxException e) {
+                        // log.warn("Некорректный regex в проекте {}: '{}'", cadProject.getId(), p);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return documents.stream()
+                .filter(doc -> {
+                    if (doc.getFilePath() == null) return false;
+
+                    String filePath = doc.getFilePath().replace("\\", "/");
+
+                    // исключаем документ, если он совпадает хотя бы с одним regex
+                    return ignorePatterns.stream().noneMatch(p -> p.matcher(filePath).matches());
+                })
+                .toList();
+    }
+
+    public List<DocumentDto> findFilteredByProjectId(Long projectId,
+                                                     String filename,
+                                                     String status,
+                                                     String lastModify,
+                                                     String responsible) {
+        List<DocumentDto> documents = findAllByProjectIdWithDto(projectId);
+
+        return documents.stream()
+                .filter(dto -> filename == null || filename.isBlank() ||
+                        (dto.getClientFilePath() != null &&
+                                dto.getClientFilePath().toLowerCase().contains(filename.toLowerCase())))
+                .filter(dto -> status == null || status.isBlank() ||
+                        (dto.getStatusDisplayName() != null &&
+                                dto.getStatusDisplayName().toLowerCase().contains(status.toLowerCase())))
+                .filter(dto -> lastModify == null || lastModify.isBlank() ||
+                        (dto.getLastModifyDisplayName() != null &&
+                                dto.getLastModifyDisplayName().toLowerCase().contains(lastModify.toLowerCase())))
+                .filter(dto -> responsible == null || responsible.isBlank() ||
+                        (dto.getResponsibleDisplayName() != null &&
+                                dto.getResponsibleDisplayName().toLowerCase().contains(responsible.toLowerCase())))
+                .sorted(Comparator.comparing(DocumentDto::getClientFilePath, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public List<DocumentDto> findAllByProjectIdWithDto(Long projectId) {
+        CadProject cadProject = cadProjectRepository.getReferenceById(projectId);
+
+        // компилируем regex-паттерны игнорирования
+        List<Pattern> ignorePatterns = cadProject.getIgnorePatterns().stream()
+                .map(p -> {
+                    try {
+                        return Pattern.compile(p, Pattern.CASE_INSENSITIVE);
+                    } catch (PatternSyntaxException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return documentRepository.findAllByProjectIdWithDto(projectId).stream()
+                // фильтр по существующим документам и игнорируемым паттернам
+                .filter(dto -> {
+                    if (dto.getClientFilePath() == null) return false;
+                    String filePath = dto.getClientFilePath().replace("\\", "/");
+                    return ignorePatterns.stream().noneMatch(p -> p.matcher(filePath).matches());
+                })
+                .map(dto -> {
+                    String clientPath = PathConverter.toClientPath(dto.getClientFilePath());
+                    return new DocumentDto(
+                            dto.getId(),
+                            clientPath,
+                            dto.getStatus(),
+                            dto.getLastModifyDisplayName() != null ? dto.getLastModifyDisplayName() : "Не указан",
+                            dto.getResponsibleDisplayName() != null ? dto.getResponsibleDisplayName() : "Не указан"
+                    );
+                })
+                .toList();
+    }
+
 }
